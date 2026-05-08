@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lunch Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={darkMode:"class",theme:{extend:{colors:{
+bg:"#f7f9fb",surface:"#f7f9fb","surface-low":"#f2f4f6","surface-high":"#e6e8ea",
+"surface-dim":"#e0e3e5","surface-white":"#ffffff",
+primary:"#0050cb","primary-c":"#0066ff","primary-bg":"#dae1ff","primary-on":"#f8f7ff",
+secondary:"#006c49","secondary-c":"#6cf8bb","secondary-on":"#00714d",
+tertiary:"#7f4f00","tertiary-c":"#a06500","tertiary-bg":"#ffddb8",
+error:"#ba1a1a","error-c":"#ffdad6","error-on":"#93000a",
+outline:"#727687","outline-v":"#c2c6d8",
+txt:"#191c1e","txt2":"#424656","txt3":"#727687"
+},fontFamily:{sans:["Inter","system-ui","sans-serif"]},
+fontSize:{"display":["32px",{lineHeight:"40px",letterSpacing:"-0.02em",fontWeight:"700"}],
+"headline":["24px",{lineHeight:"32px",letterSpacing:"-0.01em",fontWeight:"600"}],
+"title":["18px",{lineHeight:"24px",fontWeight:"600"}],
+"label":["12px",{lineHeight:"16px",letterSpacing:"0.05em",fontWeight:"700"}],
+"body":["16px",{lineHeight:"24px",fontWeight:"400"}],
+"body-sm":["14px",{lineHeight:"20px",fontWeight:"400"}]}}}}
+</script>
+<style>
+body{-webkit-font-smoothing:antialiased}
+.mi{font-family:'Material Symbols Outlined';font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+.mi-f{font-variation-settings:'FILL' 1,'wght' 400}
+.shadow-card{box-shadow:0 4px 20px rgba(0,0,0,.04)}
+.shadow-modal{box-shadow:0 20px 40px rgba(0,102,255,.1)}
+.prog{height:6px;background:#e6e8ea;border-radius:3px;overflow:hidden}
+.prog-bar{height:100%;border-radius:3px;transition:width .4s}
+input[type=file]{display:none}
+</style>
+</head>
+<body class="bg-bg text-txt font-sans flex h-screen overflow-hidden">
+
+<!-- Sidebar -->
+<aside id="sidebar" class="bg-surface-low border-r border-outline-v h-screen w-64 fixed left-0 top-0 hidden lg:flex flex-col py-8 z-40">
+  <div class="px-4 mb-8 flex flex-col items-center">
+    <div class="w-12 h-12 rounded-full bg-primary-c text-white flex items-center justify-center text-title font-bold mb-2">LT</div>
+    <h1 class="text-headline font-bold text-primary" id="sb-title">Lunch Group</h1>
+    <p class="text-body-sm text-txt3" id="sb-sub">9 members</p>
+    <button onclick="openAddModal()" class="mt-4 w-full bg-primary text-white font-title py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-primary-c transition-colors shadow-sm" id="sb-add-btn">
+      <span class="mi text-[20px]">add</span><span id="sb-add-label">Add Transaction</span>
+    </button>
+  </div>
+  <nav class="flex-1 flex flex-col gap-1" id="sidebar-nav"></nav>
+  <div class="px-4 mt-auto pt-4 border-t border-outline-v">
+    <div class="flex items-center gap-2 text-xs text-txt3">
+      <span class="mi text-[18px]">translate</span>
+      <button onclick="setLang('en')" id="lang-en" class="font-bold text-primary">EN</button>
+      <span>/</span>
+      <button onclick="setLang('vi')" id="lang-vi" class="font-bold text-txt3">VN</button>
+    </div>
+    <button onclick="isAdmin?logout():openLoginModal()" id="auth-btn" class="mt-2 w-full flex items-center gap-2 text-xs font-bold px-2 py-2.5 rounded-lg transition-colors text-primary hover:bg-primary-bg">
+      <span class="mi text-[18px]" id="auth-icon">lock</span>
+      <span id="auth-label">Login to edit</span>
+    </button>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="flex-1 flex flex-col min-w-0 overflow-y-auto lg:ml-64 relative pb-20 lg:pb-0">
+  <header class="bg-surface-white shadow-sm flex justify-between items-center w-full px-4 h-14 sticky top-0 z-30 lg:hidden">
+    <h1 class="text-sm font-bold text-primary">Lunch Tracker</h1>
+    <div class="flex items-center gap-2">
+      <button onclick="setLang(lang==='en'?'vi':'en')" class="text-xs font-bold text-primary bg-primary-bg px-2 py-1 rounded" id="m-lang">EN</button>
+      <button onclick="isAdmin?logout():openLoginModal()" class="p-1 rounded-lg" id="m-auth-btn"><span class="mi text-[22px]" id="m-auth-icon" style="color:#0050cb">lock</span></button>
+      <button onclick="openAddModal()" class="bg-primary-c text-white w-8 h-8 rounded-lg flex items-center justify-center"><span class="mi text-[20px]">add</span></button>
+    </div>
+  </header>
+  <div class="hidden lg:flex justify-between items-center w-full px-8 h-16 sticky top-0 z-30 bg-surface-white/80 backdrop-blur-md border-b border-outline-v/30">
+    <div></div>
+    <div class="flex items-center gap-3 text-txt3">
+      <button class="p-2 rounded-full hover:bg-surface-high transition-colors"><span class="mi">search</span></button>
+      <button class="p-2 rounded-full hover:bg-surface-high transition-colors"><span class="mi">notifications</span></button>
+      <button onclick="isAdmin?openSettings():openLoginModal()" class="p-2 rounded-full hover:bg-surface-high transition-colors"><span class="mi">settings</span></button>
+    </div>
+  </div>
+  <div class="p-4 lg:p-8 max-w-[1200px] w-full mx-auto flex flex-col gap-6">
+    <div class="flex justify-between items-end">
+      <div><h2 class="text-display" id="page-title"></h2><p class="text-body-sm text-txt3 mt-1" id="page-sub"></p></div>
+    </div>
+    <div id="auth-banner"></div><div id="tab-content"></div>
+  </div>
+</main>
+
+<nav class="bg-surface-white border-t border-outline-v fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 lg:hidden shadow-lg" id="mobile-nav"></nav>
+<div id="modal-host"></div>
+<div id="lightbox-host"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script>
+firebase.initializeApp({apiKey:"AIzaSyDrbRVGxjlU77S1AyfI4K7GFC-g5HI5FEo",authDomain:"lunche-81567.firebaseapp.com",projectId:"lunche-81567",storageBucket:"lunche-81567.firebasestorage.app",messagingSenderId:"1031125665255",appId:"1:1031125665255:web:cef82dd2abb76e61bca942"});
+var db=firebase.firestore();
+var bills=[],payments=[],members=[];
+var bOk=false,pOk=false,mOk=false;
+var tab='overview',modal=null,saving=false,pendingPhoto=null,compressing=false;
+var lang=localStorage.getItem('lt-lang')||'en';
+var weekState={};
+var isAdmin=localStorage.getItem('lt-auth')==='1';
+function sha256(str){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)).then(function(b){return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');});}
+function logout(){isAdmin=false;localStorage.removeItem('lt-auth');renderAll();}
+
+var L={en:{overview:'Overview',bills:'Bills',payments:'Payments',people:'Members',addTx:'Add Transaction',
+totalBills:'Total bills',totalPaid:'Total paid',outstanding:'Outstanding',count:'Count',
+topContrib:'Top contributor',recentActivity:'Recent activity',
+notYetPaid:'Not yet paid',collected:'collected',received:'Received',billTotal:'Bill total',
+balance:'Balance',short:'short',fullyPaid:'Fully Paid',collecting:'Collecting',
+addBill:'Add Bill',addPayment:'Add Payment',editBill:'Edit Bill',editPayment:'Edit Payment',
+date:'Date',total:'Total',note:'Description',person:'Member',amount:'Amount',
+coversDate:'Covers date',method:'Method',bankTransfer:'Bank Transfer',cash:'Cash',
+photo:'Receipt photo',save:'Save',saveChanges:'Save changes',delete:'Delete',cancel:'Cancel',
+select:'Select member...',compressing:'Compressing...',replace:'Replace photo',
+noData:'No data yet',connecting:'Connecting...',group:'Lunch Group',nMembers:'9 members',
+thisWeek:'THIS WEEK',lastWeek:'LAST WEEK',earlier:'EARLIER',paymentCount:'payments',
+totalPaidLabel:'total paid',payer:'Payer',contentLabel:'Details',detail:'Detail',
+confirmPayment:'Confirm payment',saveBill:'Save bill',
+orderDetails:'Order details',selectAll:'Select all',dish:'Dish',price:'Price',
+uploadReceipt:'Upload receipt photo',uploadProof:'Upload proof',dragDrop:'Click to upload or drag & drop',maxSize:'Max 5MB',
+needMore:'Needs more',topPayer:'Top Payer',paid:'Paid',unpaid:'Unpaid',
+addMember:'Add Member',editMember:'Edit Member',enName:'English name',vnName:'Vietnamese name',
+avatarColor:'Avatar color',saveMember:'Save member',deleteMember:'Delete member',
+    login:'Login',logout:'Logout',loginTitle:'Admin Login',loginHint:'Enter password to edit data',
+    loginBtn:'Login',wrongPass:'Wrong password',readOnly:'View only \u2014 click to login',
+    settingsTitle:'Settings',changePass:'Change password',newPass:'New password',confirmPass:'Confirm password',
+    passMismatch:'Passwords do not match',passChanged:'Password changed!',savePass:'Save password',
+    memberBalance:'Member balances',clear:'Clear',people:'people',allMembers:'All members',
+    allWeeks:'All weeks',clearFilter:'Clear',total:'total',login:'Login to edit',logout:'Logout',readOnly:'View only — login to edit',loginTitle:'Admin Login',loginHint:'Enter password to enable editing',wrongPass:'Wrong password',loginBtn:'Login',settingsTitle:'Settings',changePass:'Change password',newPass:'New password',confirmPass:'Confirm new password',passMismatch:'Passwords do not match',passChanged:'Password changed!',savePass:'Save password'},
+vi:{overview:'T\u1ed5ng quan',bills:'H\u00f3a \u0111\u01a1n',payments:'Thanh to\u00e1n',people:'Th\u00e0nh vi\u00ean',addTx:'Th\u00eam Giao D\u1ecbch',
+totalBills:'T\u1ed5ng h\u00f3a \u0111\u01a1n',totalPaid:'\u0110\u00e3 \u0111\u00f3ng',outstanding:'C\u00f2n thi\u1ebfu',count:'S\u1ed1 l\u01b0\u1ee3ng',
+topContrib:'Ng\u01b0\u1eddi \u0111\u00f3ng g\u00f3p nhi\u1ec1u nh\u1ea5t',recentActivity:'Ho\u1ea1t \u0111\u1ed9ng g\u1ea7n \u0111\u00e2y',
+notYetPaid:'Ch\u01b0a thanh to\u00e1n',collected:'\u0111\u00e3 thu',received:'\u0110\u00e3 nh\u1eadn',billTotal:'T\u1ed5ng H\u0110',
+balance:'C\u00f2n l\u1ea1i',short:'thi\u1ebfu',fullyPaid:'\u0110\u00e3 thu \u0111\u1ee7',collecting:'\u0110ang thu',
+addBill:'Th\u00eam H\u00f3a \u0110\u01a1n',addPayment:'Th\u00eam Thanh To\u00e1n',editBill:'S\u1eeda H\u00f3a \u0110\u01a1n',editPayment:'S\u1eeda Thanh To\u00e1n',
+date:'Ng\u00e0y',total:'T\u1ed5ng ti\u1ec1n',note:'N\u1ed9i dung',person:'Ng\u01b0\u1eddi',amount:'S\u1ed1 ti\u1ec1n',
+coversDate:'Ng\u00e0y \u00e1p d\u1ee5ng',method:'H\u00ecnh th\u1ee9c',bankTransfer:'Chuy\u1ec3n kho\u1ea3n',cash:'Ti\u1ec1n m\u1eb7t',
+photo:'\u1ea2nh bi\u00ean lai',save:'L\u01b0u',saveChanges:'L\u01b0u thay \u0111\u1ed5i',delete:'X\u00f3a',cancel:'H\u1ee7y',
+select:'Ch\u1ecdn ng\u01b0\u1eddi thanh to\u00e1n...',compressing:'\u0110ang n\u00e9n...',replace:'Thay \u1ea3nh',
+noData:'Ch\u01b0a c\u00f3 d\u1eef li\u1ec7u',connecting:'\u0110ang k\u1ebft n\u1ed1i...',group:'Nh\u00f3m \u0102n Tr\u01b0a',nMembers:'9 th\u00e0nh vi\u00ean',
+thisWeek:'TU\u1ea6N N\u00c0Y',lastWeek:'TU\u1ea6N TR\u01af\u1edcC',earlier:'TR\u01af\u1edcC \u0110\u00d3',paymentCount:'l\u1ea7n tr\u1ea3',
+totalPaidLabel:'\u0111\u00e3 tr\u1ea3',payer:'Ng\u01b0\u1eddi tr\u1ea3',contentLabel:'N\u1ed9i dung',detail:'Chi ti\u1ebft',
+confirmPayment:'X\u00e1c nh\u1eadn thanh to\u00e1n',saveBill:'L\u01b0u h\u00f3a \u0111\u01a1n',
+orderDetails:'Chi ti\u1ebft m\u00f3n \u0103n',selectAll:'Ch\u1ecdn t\u1ea5t c\u1ea3',dish:'M\u00f3n \u0103n',price:'S\u1ed1 ti\u1ec1n',
+uploadReceipt:'T\u1ea3i l\u00ean \u1ea3nh bi\u00ean lai',uploadProof:'\u1ea2nh minh ch\u1ee9ng',dragDrop:'Nh\u1ea5n \u0111\u1ec3 t\u1ea3i l\u00ean ho\u1eb7c k\u00e9o th\u1ea3',maxSize:'T\u1ed1i \u0111a 5MB',
+needMore:'C\u1ea7n \u0111\u00f3ng th\u00eam',topPayer:'Top Payer',paid:'\u0110\u00e3 \u0111\u00f3ng',unpaid:'Ch\u01b0a \u0111\u00f3ng',
+addMember:'Th\u00eam th\u00e0nh vi\u00ean',editMember:'S\u1eeda th\u00e0nh vi\u00ean',enName:'T\u00ean ti\u1ebfng Anh',vnName:'T\u00ean ti\u1ebfng Vi\u1ec7t',
+    memberBalance:'S\u1ed1 d\u01b0 th\u00e0nh vi\u00ean',clear:'\u0110\u00e3 xong',people:'ng\u01b0\u1eddi',allMembers:'T\u1ea5t c\u1ea3',allWeeks:'T\u1ea5t c\u1ea3 tu\u1ea7n',clearFilter:'X\u00f3a',total:'t\u1ed5ng',
+avatarColor:'M\u00e0u avatar',saveMember:'L\u01b0u th\u00e0nh vi\u00ean',deleteMember:'X\u00f3a th\u00e0nh vi\u00ean'}};
+function t(k){return L[lang][k]||L.en[k]||k}
+
+function toDateInput(ds){
+  // Convert "08 May 2026" -> "2026-05-08"
+  try{var d=new Date(ds);if(isNaN(d))return '';
+  return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');}
+  catch(e){return '';}
+}
+function fromDateInput(ds){
+  // Convert "2026-05-08" -> "08 May 2026"
+  try{var d=new Date(ds+'T12:00:00');if(isNaN(d))return ds;
+  return d.getDate().toString().padStart(2,'0')+' '+d.toLocaleString('en-US',{month:'short'})+' '+d.getFullYear();}
+  catch(e){return ds;}
+}
+function todayInput(){return toDateInput(today());}
+function setLang(l){lang=l;localStorage.setItem('lt-lang',l);renderAll();}
+
+function fmt(n){return(n||0).toLocaleString('vi-VN')}
+function fmtK(n){return n>=1000?Math.round(n/1000)+'k':fmt(n)}
+function today(){var d=new Date();return d.getDate().toString().padStart(2,'0')+' '+d.toLocaleString('en-US',{month:'short'})+' '+d.getFullYear()}
+
+function toInputDate(ds){
+  // "08 May 2026" -> "2026-05-08"
+  try{var d=new Date(ds);if(isNaN(d))return'';
+  return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');}
+  catch(e){return'';}
+}
+function fromInputDate(v){
+  // "2026-05-08" -> "08 May 2026"
+  try{var d=new Date(v+'T12:00:00');if(isNaN(d))return v;
+  return d.getDate().toString().padStart(2,'0')+' '+d.toLocaleString('en-US',{month:'short'})+' '+d.getFullYear();}
+  catch(e){return v;}
+}
+function dayOfWeek(ds){try{var d=new Date(ds);if(isNaN(d))return'';var days=lang==='vi'?['CN','T2','T3','T4','T5','T6','T7']:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return days[d.getDay()];}catch(e){return'';}}
+function esc(s){if(!s)return'';var m={'&':'&amp;','<':'&lt;','>':'&gt;'};return String(s).replace(/[&<>]/g,function(c){return m[c]||c})}
+function memberByEn(en){for(var i=0;i<members.length;i++)if(members[i].en===en)return members[i];return null}
+function initials(en){return(en||'?').slice(0,2).toUpperCase()}
+function tsOf(d){return d.createdAt?(d.createdAt.toMillis?d.createdAt.toMillis():new Date(d.createdAt).getTime()):0}
+
+function paymentsForBill(bill){
+  var bdate=bill.date||'';var bm=bdate.match(/(\d+)\s+([A-Za-z]+)/);if(!bm)return[];
+  var bday=bm[1],bmonth=bm[2];
+  return payments.filter(function(p){var c=p.covers||p.date||'';if(c===bdate)return true;
+    var cm=c.match(/([A-Za-z]+)/);if(!cm||cm[1]!==bmonth)return false;
+    var days=(c.match(/\d+/g)||[]).filter(function(d){return d.length<=2;});
+    return days.some(function(d){return parseInt(d)===parseInt(bday);});});
+}
+
+function getWeekKey(dateStr){
+  try{var d=new Date(dateStr);if(isNaN(d))return'other';
+  var now=new Date();var startOfWeek=new Date(now);startOfWeek.setDate(now.getDate()-now.getDay());startOfWeek.setHours(0,0,0,0);
+  var endOfWeek=new Date(startOfWeek);endOfWeek.setDate(startOfWeek.getDate()+7);
+  var lastWeekStart=new Date(startOfWeek);lastWeekStart.setDate(startOfWeek.getDate()-7);
+  if(d>=startOfWeek&&d<endOfWeek)return'thisWeek';
+  if(d>=lastWeekStart&&d<startOfWeek)return'lastWeek';
+  return'earlier';}catch(e){return'other';}
+}
+
+function compressImage(file,maxW,quality){
+  return new Promise(function(resolve,reject){var reader=new FileReader();
+    reader.onload=function(e){var img=new Image();img.onload=function(){
+      var w=img.width,h=img.height;if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+      var c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      try{resolve(c.toDataURL('image/jpeg',quality));}catch(err){reject(err);}
+    };img.onerror=function(){reject(new Error('fail'));};img.src=e.target.result;};
+    reader.onerror=function(){reject(new Error('fail'));};reader.readAsDataURL(file);});
+}
+
+function showLightbox(src){document.getElementById('lightbox-host').innerHTML='<div class="fixed inset-0 bg-black/92 z-[200] flex items-center justify-center p-5" onclick="this.parentNode.innerHTML=\'\'"><button onclick="event.stopPropagation();this.parentNode.parentNode.innerHTML=\'\'" class="absolute top-4 right-4 bg-white/10 text-white w-10 h-10 rounded-full flex items-center justify-center backdrop-blur text-lg">&times;</button><img src="'+src+'" class="max-w-full max-h-full object-contain rounded"/></div>';}
+
+var TABS=[{id:'overview',icon:'dashboard'},{id:'bills',icon:'receipt_long'},{id:'payments',icon:'payments'},{id:'people',icon:'group'}];
+
+function renderNav(){
+  var sb='',mn='';
+  TABS.forEach(function(tb){var act=tab===tb.id;var label=t(tb.id==='people'?'people':tb.id);
+    sb+='<a onclick="switchTab(\''+tb.id+'\')" class="flex items-center gap-3 px-4 py-2 mx-2 rounded-lg cursor-pointer transition-colors '+(act?'bg-primary-c text-white':'text-txt2 hover:bg-surface-high')+'"><span class="mi'+(act?' mi-f':'')+'">'+tb.icon+'</span><span class="text-sm '+(act?'font-bold':'')+'">'+label+'</span></a>';
+    mn+='<a onclick="switchTab(\''+tb.id+'\')" class="flex flex-col items-center justify-center px-3 py-1 rounded-full cursor-pointer transition-all '+(act?'bg-secondary-c/30 text-secondary-on':'text-txt3')+'"><span class="mi'+(act?' mi-f':'')+' text-[22px]">'+tb.icon+'</span><span class="text-[10px] font-bold mt-0.5">'+label+'</span></a>';
+  });
+  document.getElementById('sidebar-nav').innerHTML=sb;
+  document.getElementById('mobile-nav').innerHTML=mn;
+  document.getElementById('sb-title').textContent=t('group');
+  document.getElementById('sb-sub').textContent=t('nMembers');
+  document.getElementById('sb-add-label').textContent=t('addTx');
+  document.getElementById('page-title').textContent=t(tab==='people'?'people':tab);
+  document.getElementById('m-lang').textContent=lang.toUpperCase();
+  var ab=document.getElementById('auth-btn');var ai=document.getElementById('auth-icon');var al=document.getElementById('auth-label');
+  if(ab)ab.className='mt-2 w-full flex items-center gap-2 text-xs font-bold px-2 py-2.5 rounded-lg transition-colors '+(isAdmin?'bg-surface-high text-txt2':'text-primary hover:bg-primary-bg');
+  if(ai)ai.textContent=isAdmin?'lock_open':'lock';
+  if(al)al.textContent=isAdmin?t('logout'):t('login');
+  var mai=document.getElementById('m-auth-icon');
+  if(mai){mai.textContent=isAdmin?'lock_open':'lock';mai.style.color=isAdmin?'#737373':'#0050cb';}
+  document.getElementById('lang-en').className='font-bold '+(lang==='en'?'text-primary':'text-txt3');
+  document.getElementById('lang-vi').className='font-bold '+(lang==='vi'?'text-primary':'text-txt3');
+}
+function switchTab(t2){tab=t2;renderAll();}
+
+/* ── OVERVIEW ── */
+function calcMemberBalances(){
+  // For each member: which bill dates are they in items but haven't paid?
+  var status={};
+  members.forEach(function(m){status[m.en]={unpaidDates:[],paidDates:[],totalPaid:0};});
+  payments.forEach(function(p){if(status[p.en])status[p.en].totalPaid+=(p.amount||0);});
+
+  bills.forEach(function(bill){
+    var billItems=bill.items||[];if(!billItems.length)return;
+    var bp=paymentsForBill(bill);
+    var paidNames={};bp.forEach(function(p){paidNames[p.en]=true;});
+    var shortDate=bill.date.replace(' 2026','').replace(' 2025','');
+    billItems.forEach(function(item){
+      if(!status[item.en])status[item.en]={unpaidDates:[],paidDates:[],totalPaid:0};
+      if(paidNames[item.en])status[item.en].paidDates.push(shortDate);
+      else status[item.en].unpaidDates.push(shortDate);
+    });
+  });
+  return status;
+}
+
+function renderOverview(){
+  var totalB=bills.reduce(function(s,b){return s+(b.total||0)},0);
+  var totalP=payments.reduce(function(s,p){return s+(p.amount||0)},0);
+  var out=totalB-totalP;
+  var byP={};payments.forEach(function(p){byP[p.en]=(byP[p.en]||0)+(p.amount||0);});
+  var topN='--',topA=0,topCnt=0;Object.keys(byP).forEach(function(k){if(byP[k]>topA){topA=byP[k];topN=k;topCnt=payments.filter(function(p){return p.en===k}).length;}});
+  var topM=memberByEn(topN);
+  var items=[];bills.forEach(function(b){items.push({kind:'bill',d:b,ts:tsOf(b)});});
+  payments.forEach(function(p){items.push({kind:'payment',d:p,ts:tsOf(p)});});
+  items.sort(function(a,b){return b.ts-a.ts});var recent=items.slice(0,5);
+  var rh='';recent.forEach(function(it){var d=it.d;
+    if(it.kind==='bill'){var dow=dayOfWeek(d.date);
+      rh+='<div class="flex items-center justify-between p-4 border-b border-outline-v/30 hover:bg-surface-low/50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-error-c/30 text-error flex items-center justify-center shrink-0"><span class="mi text-[20px]">restaurant</span></div><div><div class="text-sm font-semibold">'+esc(d.note||d.date)+'</div><div class="text-xs text-txt3">'+esc(d.date)+(dow?' &middot; '+dow:'')+'</div></div></div><div class="text-right"><span class="text-sm font-bold text-error">- '+fmt(d.total)+' &#273;</span></div></div>';
+    }else{var m=memberByEn(d.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';
+      rh+='<div class="flex items-center justify-between p-4 border-b border-outline-v/30 hover:bg-surface-low/50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style="background:'+bg+';color:'+fg+'">'+initials(d.en)+'</div><div><div class="text-sm font-semibold">'+esc(d.en)+' '+t('paid').toLowerCase()+'</div><div class="text-xs text-txt3">'+esc(d.covers||d.date)+'</div></div></div><div class="text-right"><span class="text-sm font-bold text-secondary">+ '+fmt(d.amount)+' &#273;</span></div></div>';}
+  });
+
+  // Member balance section — track paid/unpaid days, no amount estimation
+  var balStatus=calcMemberBalances();
+  var sorted=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
+  var balHtml='';
+  sorted.forEach(function(m){
+    var s=balStatus[m.en]||{unpaidDates:[],paidDates:[],totalPaid:0};
+    var bg=m.bg||'#e6e8ea',fg=m.fg||'#424656';
+    var hasData=s.unpaidDates.length>0||s.paidDates.length>0;
+    var isSettled=hasData&&s.unpaidDates.length===0;
+    var hasUnpaid=s.unpaidDates.length>0;
+
+    var badge,badgeBg,badgeColor;
+    if(!hasData){
+      badge='–';badgeBg='#f5f5f4';badgeColor='#a8a29e';
+    }else if(isSettled){
+      badge='<span class="mi text-[14px]">check_circle</span>'+t('clear');
+      badgeBg='#dcfce7';badgeColor='#065f46';
+    }else{
+      badge='<span class="mi text-[14px]">warning</span>'+s.unpaidDates.join(', ');
+      badgeBg='#fef2f2';badgeColor='#991b1b';
+    }
+
+    balHtml+='<div class="flex items-center gap-3 py-2.5 border-b border-outline-v/20 last:border-0">';
+    balHtml+='<div class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style="background:'+bg+';color:'+fg+'">'+initials(m.en)+'</div>';
+    balHtml+='<div class="flex-1 min-w-0"><div class="text-sm font-semibold">'+esc(m.en)+'<span class="text-xs text-txt3 font-normal ml-1">('+esc(m.vn)+')</span></div>';
+    if(s.totalPaid>0)balHtml+='<div class="text-xs text-txt3">'+t('totalPaidLabel')+': '+fmt(s.totalPaid)+'&#273;</div>';
+    balHtml+='</div>';
+    balHtml+='<div class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap" style="background:'+badgeBg+';color:'+badgeColor+'">'+badge+'</div>';
+    balHtml+='</div>';
+  });
+
+  var balSection='<section class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-5 mt-4"><div class="flex items-center gap-2 mb-3"><span class="mi text-[18px] text-txt3">account_balance_wallet</span><h3 class="text-sm font-semibold">'+t('memberBalance')+'</h3></div>'+balHtml+'</section>';
+
+  return '<section class="grid grid-cols-2 lg:grid-cols-4 gap-3">'+
+    '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-outline-v/20"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px]">receipt_long</span><span class="text-xs font-bold uppercase tracking-wider">'+t('totalBills')+'</span></div><div class="text-headline font-bold">'+fmt(totalB)+' <span class="text-sm font-normal text-txt3">&#273;</span></div></div>'+
+    '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-outline-v/20"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px]">payments</span><span class="text-xs font-bold uppercase tracking-wider">'+t('totalPaid')+'</span></div><div class="text-headline font-bold text-secondary">'+fmt(totalP)+' <span class="text-sm font-normal text-txt3">&#273;</span></div></div>'+
+    '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-error-c"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px] text-error">warning</span><span class="text-xs font-bold uppercase tracking-wider">'+t('outstanding')+'</span></div><div class="text-headline font-bold text-error">'+fmt(Math.abs(out))+' <span class="text-sm font-normal text-txt3">&#273;</span></div></div>'+
+    '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-outline-v/20"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px]">analytics</span><span class="text-xs font-bold uppercase tracking-wider">'+t('count')+'</span></div><div class="text-headline font-bold">'+bills.length+' <span class="text-sm font-normal text-txt3">/ '+payments.length+'</span></div></div></section>'+
+    '<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-2">'+
+    '<section class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-6 flex flex-col items-center text-center relative overflow-hidden"><div class="absolute inset-0 bg-gradient-to-br from-primary-bg/40 to-transparent"></div><div class="relative z-10 flex flex-col items-center"><div class="w-20 h-20 rounded-full p-0.5 bg-gradient-to-tr from-primary to-secondary-c mb-3"><div class="w-full h-full rounded-full flex items-center justify-center text-xl font-bold" style="background:'+(topM?topM.bg:'#dae1ff')+';color:'+(topM?topM.fg:'#0050cb')+'">'+initials(topN)+'</div></div><span class="text-[10px] font-bold text-primary uppercase tracking-widest">'+t('topContrib')+'</span><h3 class="text-xl font-bold mt-1">'+esc(topN)+'</h3><p class="text-2xl font-bold text-primary mt-2">'+fmt(topA)+' &#273;</p><p class="text-xs text-txt3 mt-1">'+topCnt+' '+t('paymentCount')+'</p></div></section>'+
+    '<section class="lg:col-span-2 flex flex-col"><div class="flex justify-between items-center mb-2"><h3 class="text-sm font-semibold">'+t('recentActivity')+'</h3></div><div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-0 overflow-hidden flex-1">'+rh+'</div></section></div>'+
+    balSection;
+}
+
+function renderBills(){
+  if(!bills.length)return'<div class="text-center text-txt3 py-12">'+t('noData')+'</div>';
+  // Sort by actual bill date descending (not createdAt)
+  var sorted=bills.slice().sort(function(a,b){
+    try{return new Date(b.date).getTime()-new Date(a.date).getTime();}catch(e){return 0;}
+  });
+  var groups={thisWeek:[],lastWeek:[],earlier:[]};
+  sorted.forEach(function(b){var wk=getWeekKey(b.date);(groups[wk]||groups.earlier).push(b);});
+  // Within each group: sort by day of week, Friday (5) first → Mon (1) last
+  var DOW_ORDER={5:0,4:1,3:2,2:3,1:4,6:5,0:6};
+  function sortByDow(arr){return arr.sort(function(a,b){
+    var da=new Date(a.date),db=new Date(b.date);
+    if(isNaN(da)||isNaN(db))return 0;
+    var diff=DOW_ORDER[da.getDay()]-DOW_ORDER[db.getDay()];
+    return diff!==0?diff:db.getTime()-da.getTime(); // same DOW → newer first
+  });}
+  Object.keys(groups).forEach(function(k){sortByDow(groups[k]);});
+  var html='<div class="space-y-6">';
+  [{key:'thisWeek',label:t('thisWeek')},{key:'lastWeek',label:t('lastWeek')},{key:'earlier',label:t('earlier')}].forEach(function(g){
+    if(!groups[g.key].length)return;
+    var open=weekState[g.key]!==false;
+    html+='<section><button onclick="toggleWeek(\''+g.key+'\')" class="flex items-center gap-2 w-full text-left mb-3 p-2 rounded-lg hover:bg-surface-low transition-colors group"><span class="mi text-txt3 group-hover:text-primary transition-colors">'+(open?'expand_more':'chevron_right')+'</span><h2 class="text-title font-bold uppercase tracking-wide">'+g.label+'</h2></button>';
+    if(open){html+='<div class="space-y-4">';
+      groups[g.key].forEach(function(bill){
+        var bp=paymentsForBill(bill);var received=bp.reduce(function(s,p){return s+(p.amount||0)},0);
+        var total=bill.total||0;var pct=total>0?Math.min(100,Math.round(received/total*100)):0;
+        var short_=total-received;var dow=dayOfWeek(bill.date);
+        var paidNames={};bp.forEach(function(p){paidNames[p.en]=true;});
+        var notPaid=members.filter(function(m){return!paidNames[m.en]}).map(function(m){return m.en});
+        var isPaid=pct>=100;var progColor=pct<30?'bg-error':pct<70?'bg-tertiary-c':'bg-secondary';
+        html+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 overflow-hidden">';
+        html+='<div class="p-5 border-b border-outline-v/30"><div class="flex justify-between items-start gap-4 cursor-pointer" data-eb="'+bill.id+'"><div><div class="flex items-center gap-2 mb-1"><span class="text-label font-bold text-txt3 bg-surface-low px-2 py-1 rounded uppercase">'+(dow||'')+'</span><span class="text-body-sm text-txt3">'+esc(bill.date)+'</span></div><div class="text-headline text-primary font-semibold">'+esc(bill.note||'--')+'</div></div><div class="text-right"><div class="text-2xl font-bold tabular-nums">'+fmt(total)+'<span class="text-title ml-1">&#273;</span></div>';
+        html+='<div class="mt-1"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label '+(isPaid?'bg-secondary-c/20 text-secondary-on':'bg-tertiary-bg text-tertiary')+'""><span class="mi text-[14px]">'+(isPaid?'check_circle':'sync')+'</span>'+(isPaid?t('fullyPaid'):t('collecting'))+'</span></div>';
+        html+='</div></div></div>';
+        if(bill.photoData)html+='<img src="'+bill.photoData+'" class="w-full max-h-48 object-cover cursor-pointer" onclick="showLightbox(this.src)"/>';
+        html+='<div class="p-5"><div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+        
+        // Left column: Items list or Paid list
+        var billItems=bill.items||[];
+        if(billItems.length){
+          html+='<div><h3 class="text-sm font-semibold text-txt2 mb-2 flex items-center gap-1"><span class="mi text-[16px]">group</span>'+t('orderDetails')+' ('+billItems.length+')</h3><div class="space-y-1">';
+          billItems.forEach(function(item){
+            var m=memberByEn(item.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';
+            var hasPaid=paidNames[item.en];
+            var existingPayment=hasPaid?bp.find(function(p){return p.en===item.en}):null;
+            if(hasPaid){
+              // Paid: show green, click to edit payment
+              html+='<div class="flex justify-between items-center text-sm py-1.5 px-2 rounded-lg cursor-pointer hover:bg-surface-low transition-colors" data-ep="'+(existingPayment?existingPayment.id:'')+'">';
+            }else{
+              // Unpaid: show red, click to quick-add payment
+              html+='<div class="flex justify-between items-center text-sm py-1.5 px-2 rounded-lg bg-error-c/15 cursor-pointer hover:bg-error-c/25 transition-colors active:scale-[.98]" data-qp="1" data-en="'+esc(item.en)+'" data-date="'+esc(bill.date)+'" data-price="'+(item.price||0)+'">';
+            }
+            html+='<div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold" style="background:'+bg+';color:'+fg+'">'+initials(item.en)+'</div>';
+            html+='<div><span class="font-medium">'+esc(item.en)+'</span>';
+            if(item.dish)html+='<span class="text-xs text-txt3 ml-1">('+esc(item.dish)+')</span>';
+            html+='</div></div>';
+            html+='<div class="flex items-center gap-2">';
+            if(hasPaid&&existingPayment)html+='<span class="text-xs font-semibold text-secondary">'+fmtK(existingPayment.amount)+'</span>';
+            else if(!hasPaid&&item.price)html+='<span class="text-xs text-txt3">'+fmtK(item.price)+'</span>';
+            if(!hasPaid)html+='<span class="text-[10px] font-bold text-error bg-error-c/30 px-1.5 py-0.5 rounded">'+t('unpaid')+'</span>';
+            html+='<span class="mi text-[16px] '+(hasPaid?'text-secondary':'text-error')+'">'+(hasPaid?'check_circle':'add_circle')+'</span>';
+            html+='</div></div>';
+          });
+          html+='</div></div>';
+        }else if(bp.length){
+          // Fallback: show payments
+          html+='<div><h3 class="text-sm font-semibold text-secondary mb-2 flex items-center gap-1"><span class="mi text-[16px]">payments</span>'+t('paid')+' ('+bp.length+')</h3><div class="space-y-1">';
+          bp.forEach(function(p){var m=memberByEn(p.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';
+            html+='<div class="flex justify-between items-center text-sm py-1 cursor-pointer" data-ep="'+p.id+'"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold" style="background:'+bg+';color:'+fg+'">'+initials(p.en)+'</div><span>'+esc(p.en)+'</span></div><span class="font-semibold text-secondary">'+fmtK(p.amount)+'</span></div>';});
+          html+='</div></div>';
+        }
+        // Summary
+        html+='<div class="bg-surface-low p-4 rounded-xl"><div class="flex justify-between mb-1 text-sm"><span class="text-txt3">'+t('billTotal')+'</span><span class="font-bold">'+fmt(total)+'&#273;</span></div><div class="flex justify-between mb-1 text-sm"><span class="text-secondary">'+t('received')+'</span><span class="font-bold text-secondary">'+fmt(received)+'&#273;</span></div>';
+        if(short_>0)html+='<div class="flex justify-between mb-1 text-sm border-t border-outline-v/30 pt-1 mt-1"><span class="text-error font-semibold">'+t('balance')+'</span><span class="font-bold text-error">'+fmt(-short_)+'&#273;</span></div>';
+        html+='<div class="prog mt-2"><div class="prog-bar '+progColor+'" style="width:'+pct+'%"></div></div></div></div>';
+        // Not yet paid - use items if available, else fallback to all members
+        var unpaidList;
+        if(billItems.length){unpaidList=billItems.filter(function(it){return!paidNames[it.en]}).map(function(it){return it.en});}
+        else{unpaidList=notPaid;}
+        if(unpaidList.length)html+='<div class="px-5 py-3 bg-error-c/20 border-t border-error-c/30 text-sm text-error-on"><span class="font-bold">'+t('notYetPaid')+' ('+unpaidList.length+'):</span> '+esc(unpaidList.join(', '))+'</div>';
+        html+='</div>';
+      });
+      html+='</div>';}
+    html+='</section>';
+  });
+  html+='</div>';return html;
+}
+function toggleWeek(k){weekState[k]=weekState[k]===false?true:false;renderAll();}
+
+/* ── PAYMENTS ── */
+var pFilter={name:'',week:'',date:''};
+
+function renderPayments(){
+  if(!payments.length)return'<div class="text-center text-txt3 py-12">'+t('noData')+'</div>';
+
+  // Filter bar
+  var memberOpts='<option value="">'+t('allMembers')+'</option>';
+  var mNames=[];payments.forEach(function(p){if(mNames.indexOf(p.en)<0)mNames.push(p.en);});
+  mNames.sort().forEach(function(n){memberOpts+='<option value="'+esc(n)+'"'+(pFilter.name===n?' selected':'')+'>'+esc(n)+'</option>';});
+
+  var filterBar='<div class="flex flex-wrap gap-2 mb-4 items-center">'+
+    '<div class="relative flex-1 min-w-[160px]"><span class="mi absolute left-3 top-1/2 -translate-y-1/2 text-txt3 text-[18px]">person_search</span>'+
+    '<select onchange="setPFilter(\'name\',this.value)" class="w-full pl-9 pr-3 py-2 bg-surface-white border border-outline-v rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer">'+memberOpts+'</select></div>'+
+    '<div class="relative"><span class="mi absolute left-3 top-1/2 -translate-y-1/2 text-txt3 text-[18px]">calendar_view_week</span>'+
+    '<select onchange="setPFilter(\'week\',this.value)" class="pl-9 pr-3 py-2 bg-surface-white border border-outline-v rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer">'+
+    '<option value="">'+t('allWeeks')+'</option>'+
+    '<option value="thisWeek"'+(pFilter.week==='thisWeek'?' selected':'')+'>'+t('thisWeek')+'</option>'+
+    '<option value="lastWeek"'+(pFilter.week==='lastWeek'?' selected':'')+'>'+t('lastWeek')+'</option>'+
+    '<option value="earlier"'+(pFilter.week==='earlier'?' selected':'')+'>'+t('earlier')+'</option>'+
+    '</select></div>'+
+    '<div class="relative"><span class="mi absolute left-3 top-1/2 -translate-y-1/2 text-txt3 text-[18px]">calendar_today</span>'+
+    '<input type="date" onchange="setPFilter(\'date\',this.value)" value="'+esc(pFilter.date)+'" class="pl-9 pr-3 py-2 bg-surface-white border border-outline-v rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary cursor-pointer"/></div>'+
+    (pFilter.name||pFilter.week||pFilter.date?'<button onclick="clearPFilter()" class="flex items-center gap-1 px-3 py-2 bg-error-c/20 text-error rounded-lg text-sm font-semibold hover:bg-error-c/30 transition-colors"><span class="mi text-[16px]">close</span>'+t('clearFilter')+'</button>':'')+
+    '</div>';
+
+  // Apply filters
+  var filtered=payments.slice().sort(function(a,b){
+    var da=new Date(a.covers||a.date),db=new Date(b.covers||b.date);
+    return (isNaN(db)?0:db.getTime())-(isNaN(da)?0:da.getTime());
+  });
+  if(pFilter.name)filtered=filtered.filter(function(p){return p.en===pFilter.name;});
+  if(pFilter.week)filtered=filtered.filter(function(p){return getWeekKey(p.covers||p.date)===pFilter.week;});
+  if(pFilter.date){
+    var fd=new Date(pFilter.date);
+    filtered=filtered.filter(function(p){
+      var pd=new Date(p.covers||p.date);
+      return !isNaN(pd)&&pd.toDateString()===fd.toDateString();
+    });
+  }
+
+  var countLabel=filtered.length+''+( payments.length!==filtered.length?' / '+payments.length+' '+t('total'):'')+'';
+  var totalFiltered=filtered.reduce(function(s,p){return s+(p.amount||0);},0);
+
+  var html=filterBar;
+  if(!filtered.length){html+='<div class="text-center text-txt3 py-12 bg-surface-white rounded-xl shadow-card border border-outline-v/20">'+t('noData')+'</div>';return html;}
+
+  // Summary bar
+  html+='<div class="flex items-center justify-between mb-2 px-1"><span class="text-xs text-txt3 font-medium">'+countLabel+' '+t('payLabel')+'</span><span class="text-sm font-bold text-secondary">'+fmt(totalFiltered)+' &#273;</span></div>';
+
+  html+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 overflow-hidden">';
+  html+='<div class="hidden md:grid grid-cols-12 gap-3 p-4 bg-surface-low border-b border-outline-v text-label font-bold text-txt3 uppercase tracking-wider"><div class="col-span-4">'+t('payer')+'</div><div class="col-span-3">'+t('amount')+'</div><div class="col-span-3">'+t('contentLabel')+'</div><div class="col-span-2 text-right">'+t('detail')+'</div></div>';
+  filtered.forEach(function(p){var m=memberByEn(p.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';var dow=dayOfWeek(p.covers||p.date);
+    html+='<div class="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 p-4 border-b border-outline-v/20 hover:bg-surface-low/50 transition-colors items-center cursor-pointer" data-ep2="'+p.id+'">';
+    html+='<div class="col-span-1 md:col-span-4 flex items-center gap-3">'+(p.photoData?'<img src="'+p.photoData+'" class="w-10 h-10 rounded-lg object-cover shrink-0" onclick="event.stopPropagation();showLightbox(this.src)"/>':'<div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style="background:'+bg+';color:'+fg+'">'+initials(p.en)+'</div>')+'<div><p class="text-sm font-semibold">'+esc(p.en)+'</p><p class="text-xs text-txt3 md:hidden">'+esc(p.covers||p.date)+'</p></div></div>';
+    html+='<div class="col-span-1 md:col-span-3"><span class="text-title font-bold text-secondary">'+fmt(p.amount)+' &#273;</span></div>';
+    html+='<div class="col-span-1 md:col-span-3 hidden md:block"><p class="text-sm">'+esc(p.covers||p.date)+(dow?' &middot; '+dow:'')+'</p><p class="text-xs text-txt3">'+esc(p.method||'')+'</p></div>';
+    html+='<div class="col-span-1 md:col-span-2 flex justify-end"><span class="inline-flex items-center gap-1 text-txt3 bg-surface-low px-2 py-1 rounded-full text-label"><span class="mi text-[14px]">'+(p.method==='Cash'?'payments':'account_balance')+'</span>'+(p.method==='Cash'?t('cash'):t('bankTransfer'))+'</span></div></div>';
+  });
+  html+='</div>';return html;
+}
+
+function setPFilter(key,val){pFilter[key]=val;renderAll();}
+function clearPFilter(){pFilter={name:'',week:'',date:''};renderAll();}
+
+/* ── PEOPLE ── */
+function renderPeople(){
+  var sorted=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
+  if(!sorted.length)return'<div class="text-center text-txt3 py-12">'+t('noData')+'</div>';
+  var maxPaid=0;sorted.forEach(function(m){var p=payments.filter(function(p){return p.en===m.en}).reduce(function(s,p){return s+(p.amount||0)},0);if(p>maxPaid)maxPaid=p;});
+  var html='<div class="flex justify-end mb-3"><button onclick="openMemberModal()" class="flex items-center gap-1 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-c transition-colors"><span class="mi text-[18px]">person_add</span>'+t('addMember')+'</button></div>';
+  html+='<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
+  sorted.forEach(function(m){
+    var paid=payments.filter(function(p){return p.en===m.en}).reduce(function(s,p){return s+(p.amount||0)},0);
+    var cnt=payments.filter(function(p){return p.en===m.en}).length;
+    var pct=maxPaid>0?Math.round(paid/maxPaid*100):0;
+    var isTop=paid===maxPaid&&paid>0;
+    var barColor=isTop?'bg-primary':pct>60?'bg-secondary':'bg-outline';
+    html+='<div class="bg-surface-white rounded-xl p-5 shadow-card border border-outline-v/20 relative overflow-hidden flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow" data-em="'+m.id+'">';
+    if(isTop)html+='<div class="absolute top-0 right-0 bg-tertiary-c text-white px-2 py-1 rounded-bl-lg text-label flex items-center gap-1"><span class="mi text-[12px]">star</span>'+t('topPayer')+'</div>';
+    html+='<div class="flex items-start gap-3"><div class="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border-2 border-surface-white" style="background:'+(m.bg||'#e6e8ea')+';color:'+(m.fg||'#424656')+'">'+initials(m.en)+'</div><div><h3 class="text-title font-semibold">'+esc(m.vn||m.en)+'</h3><p class="text-body-sm text-txt3">'+esc(m.en)+'</p></div></div>';
+    html+='<div class="mt-4 pt-3 border-t border-outline-v/30"><div class="flex justify-between items-center mb-2"><span class="text-body-sm text-txt3">'+cnt+' '+t('paymentCount')+'</span><span class="text-title font-bold '+('')+'">'+fmt(paid)+' &#273;</span></div>';
+    html+='<div class="prog"><div class="prog-bar '+barColor+'" style="width:'+pct+'%"></div></div></div></div>';
+  });
+  html+='</div>';return html;
+}
+
+function renderAll(){renderNav();
+  var bnr=document.getElementById('auth-banner');
+  if(bnr)bnr.innerHTML=isAdmin?'':'<div class="flex items-center gap-2 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg mb-2 cursor-pointer hover:bg-amber-100" onclick="openLoginModal()"><span class="mi text-[16px]">lock</span>'+t('readOnly')+'</div>';var c='';
+  if(tab==='overview')c=renderOverview();else if(tab==='bills')c=renderBills();
+  else if(tab==='payments')c=renderPayments();else if(tab==='people')c=renderPeople();
+  document.getElementById('tab-content').innerHTML=c;wireEvents();}
+function wireEvents(){
+  document.querySelectorAll('[data-eb]').forEach(function(el){el.onclick=function(){var b=bills.find(function(x){return x.id===el.getAttribute('data-eb')});if(b)openEditModal('bill',b);};});
+  document.querySelectorAll('[data-ep],[data-ep2]').forEach(function(el){el.onclick=function(e){e.stopPropagation();var id=el.getAttribute('data-ep')||el.getAttribute('data-ep2');if(!id)return;var p=payments.find(function(x){return x.id===id});if(p)openEditModal('payment',p);};});
+  // Quick payment: click unpaid person in order details
+  document.querySelectorAll('[data-qp]').forEach(function(el){el.onclick=function(e){
+    e.stopPropagation();
+    var en=el.getAttribute('data-en');
+    var date=el.getAttribute('data-date');
+    var price=parseInt(el.getAttribute('data-price'))||0;
+    var m=members.find(function(x){return x.en===en});
+    openQuickPayment(en,m?m.vn:'',date,price);
+  };});
+  document.querySelectorAll('[data-em]').forEach(function(el){el.onclick=function(){var m=members.find(function(x){return x.id===el.getAttribute('data-em')});if(m)openMemberModal(m);};});
+}
+
+/* ── MEMBER MODAL ── */
+var COLORS=[
+  {bg:'#fce7f3',fg:'#831843'},{bg:'#dcfce7',fg:'#166534'},{bg:'#ede9fe',fg:'#5b21b6'},
+  {bg:'#fef9c3',fg:'#713f12'},{bg:'#fee2e2',fg:'#991b1b'},{bg:'#d1fae5',fg:'#064e3b'},
+  {bg:'#dbeafe',fg:'#1e40af'},{bg:'#fef3c7',fg:'#92400e'},{bg:'#f3f4f6',fg:'#374151'},
+  {bg:'#e0e7ff',fg:'#3730a3'},{bg:'#fce7f3',fg:'#9d174d'},{bg:'#ccfbf1',fg:'#134e4a'}
+];
+var memberModal=null;
+
+function openMemberModal(data){if(!isAdmin){openLoginModal();return;}memberModal={mode:data?'edit':'add',data:data||null};renderMemberModal();}
+
+function renderMemberModal(){
+  var host=document.getElementById('modal-host');
+  if(!memberModal){host.innerHTML='';return;}
+  var d=memberModal.data||{};var isEdit=memberModal.mode==='edit';
+  var title=isEdit?t('editMember'):t('addMember');
+  var selBg=d.bg||COLORS[0].bg;var selFg=d.fg||COLORS[0].fg;
+
+  var colorPicker='<div class="flex flex-wrap gap-2">';
+  COLORS.forEach(function(c,i){
+    var sel=(c.bg===selBg)?'ring-2 ring-primary ring-offset-2':'';
+    colorPicker+='<button type="button" onclick="pickColor('+i+')" class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold '+sel+'" style="background:'+c.bg+';color:'+c.fg+'">A</button>';
+  });
+  colorPicker+='</div>';
+
+  var preview='<div class="flex items-center gap-3 mb-4 p-3 bg-surface-low rounded-xl"><div class="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold" id="mm-preview" style="background:'+selBg+';color:'+selFg+'">'+initials(d.en||'?')+'</div><div><div class="text-sm font-semibold" id="mm-preview-name">'+(d.vn||d.en||'Name')+'</div><div class="text-xs text-txt3" id="mm-preview-sub">'+(d.en||'English')+'</div></div></div>';
+
+  host.innerHTML='<div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" id="mbg"><div class="bg-surface-white w-full max-w-[420px] rounded-[20px] shadow-modal flex flex-col overflow-hidden" onclick="event.stopPropagation()"><div class="flex items-center justify-between px-6 py-4 border-b border-outline-v/30"><h2 class="text-title font-bold">'+title+'</h2><button class="w-8 h-8 rounded-full hover:bg-surface-low flex items-center justify-center text-txt3" onclick="closeMemberModal()"><span class="mi text-[20px]">close</span></button></div><form id="mf" class="px-6 py-5 space-y-4" onsubmit="handleMemberSubmit(event)">'+preview+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('enName')+'</label><input name="en" value="'+esc(d.en||'')+'" placeholder="Gerard" required class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" oninput="updateMemberPreview()"/></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('vnName')+'</label><input name="vn" value="'+esc(d.vn||'')+'" placeholder="Duc" required class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" oninput="updateMemberPreview()"/></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('avatarColor')+'</label>'+colorPicker+'<input type="hidden" name="bg" value="'+selBg+'" id="mm-bg"/><input type="hidden" name="fg" value="'+selFg+'" id="mm-fg"/></div>'+
+    '</form><div class="px-6 py-4 border-t border-outline-v/30 flex justify-end gap-3"><button type="button" onclick="closeMemberModal()" class="px-5 py-2 rounded-lg text-primary border border-outline-v/30 text-sm font-semibold hover:bg-surface-low transition-colors">'+t('cancel')+'</button>'+(isEdit?'<button type="button" onclick="deleteMember()" class="px-5 py-2 rounded-lg text-error border border-error-c text-sm font-semibold hover:bg-error-c/20 transition-colors">'+t('deleteMember')+'</button>':'')+'<button type="submit" form="mf" class="px-5 py-2 rounded-lg bg-primary-c text-white text-sm font-semibold hover:bg-primary transition-colors shadow-sm">'+t('saveMember')+'</button></div></div></div>';
+
+  document.getElementById('mbg').onclick=function(e){if(e.target.id==='mbg')closeMemberModal();};
+}
+
+function pickColor(i){
+  document.getElementById('mm-bg').value=COLORS[i].bg;
+  document.getElementById('mm-fg').value=COLORS[i].fg;
+  var prev=document.getElementById('mm-preview');
+  prev.style.background=COLORS[i].bg;prev.style.color=COLORS[i].fg;
+  // Update ring on buttons
+  var btns=document.querySelectorAll('#mf button[onclick^="pickColor"]');
+  btns.forEach(function(b,j){b.className=b.className.replace(/ring-2 ring-primary ring-offset-2/g,'');if(j===i)b.className+=' ring-2 ring-primary ring-offset-2';});
+  if(memberModal)memberModal.data=Object.assign(memberModal.data||{},{bg:COLORS[i].bg,fg:COLORS[i].fg});
+}
+
+function updateMemberPreview(){
+  var en=document.querySelector('#mf input[name=en]').value;
+  var vn=document.querySelector('#mf input[name=vn]').value;
+  var prev=document.getElementById('mm-preview');
+  if(prev)prev.textContent=(en||'?').slice(0,2).toUpperCase();
+  var pn=document.getElementById('mm-preview-name');if(pn)pn.textContent=vn||en||'Name';
+  var ps=document.getElementById('mm-preview-sub');if(ps)ps.textContent=en||'English';
+}
+
+function closeMemberModal(){memberModal=null;document.getElementById('modal-host').innerHTML='';}
+
+function handleMemberSubmit(e){
+  e.preventDefault();var fd=new FormData(e.target);
+  var payload={en:fd.get('en'),vn:fd.get('vn'),bg:fd.get('bg'),fg:fd.get('fg')};
+  if(memberModal.mode==='edit'){
+    db.collection('members').doc(memberModal.data.id).update(payload).then(closeMemberModal).catch(function(err){alert(err.message);});
+  }else{
+    payload.order=members.length+1;
+    db.collection('members').add(payload).then(closeMemberModal).catch(function(err){alert(err.message);});
+  }
+}
+
+function deleteMember(){
+  if(!memberModal||!memberModal.data)return;
+  if(!confirm(t('deleteMember')+'?'))return;
+  db.collection('members').doc(memberModal.data.id).delete().then(closeMemberModal).catch(function(err){alert(err.message);});
+}
+function render(){if(bOk&&pOk&&mOk)renderAll();}
+
+function openAddModal(){if(!isAdmin){openLoginModal();return;}modal={type:'bill',mode:'add',data:null};pendingPhoto=null;renderModal();}
+
+function openLoginModal(){
+  var host=document.getElementById('modal-host');
+  host.innerHTML='<div style="position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px" id="lbg"><div style="background:#fff;width:100%;max-width:360px;border-radius:20px;overflow:hidden;box-shadow:0 20px 40px rgba(0,102,255,.1)" onclick="event.stopPropagation()"><div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #e5e7eb"><span style="font-size:16px;font-weight:700">'+t('loginTitle')+'</span><button onclick="document.getElementById(\'modal-host\').innerHTML=\'\'" style="width:32px;height:32px;border:none;background:#f5f5f4;border-radius:50%;cursor:pointer;font-size:18px">&times;</button></div><div style="padding:20px 24px"><p style="font-size:13px;color:#737373;margin-bottom:14px">'+t('loginHint')+'</p><form onsubmit="doLogin(event)"><input id="pw-input" type="password" placeholder="Password" autofocus style="width:100%;padding:12px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:14px;outline:none;margin-bottom:8px;box-sizing:border-box"/><p id="pw-err" style="display:none;color:#dc2626;font-size:12px;margin-bottom:8px">'+t('wrongPass')+'</p><button type="submit" style="width:100%;padding:12px;background:#0066ff;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">'+t('loginBtn')+'</button></form></div></div></div>';
+  document.getElementById('lbg').onclick=function(e){if(e.target.id==='lbg')document.getElementById('modal-host').innerHTML='';};
+  setTimeout(function(){var p=document.getElementById('pw-input');if(p)p.focus();},100);
+}
+
+function doLogin(e){
+  e.preventDefault();
+  var pw=document.getElementById('pw-input').value;
+  db.doc('meta/auth').get().then(function(doc){
+    var stored=(doc.exists&&doc.data().pass)?doc.data().pass:'enclave2026';
+    if(pw===stored){
+      isAdmin=true;localStorage.setItem('lt-auth','1');
+      document.getElementById('modal-host').innerHTML='';renderAll();
+    }else{
+      var err=document.getElementById('pw-err');if(err)err.style.display='block';
+      document.getElementById('pw-input').value='';document.getElementById('pw-input').focus();
+    }
+  }).catch(function(){
+    if(pw==='enclave2026'){isAdmin=true;localStorage.setItem('lt-auth','1');document.getElementById('modal-host').innerHTML='';renderAll();}
+    else{var err=document.getElementById('pw-err');if(err)err.style.display='block';}
+  });
+}
+
+function openSettings(){
+  var host=document.getElementById('modal-host');
+  host.innerHTML='<div style="position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px" id="sbg"><div style="background:#fff;width:100%;max-width:400px;border-radius:20px;overflow:hidden;box-shadow:0 20px 40px rgba(0,102,255,.1)" onclick="event.stopPropagation()"><div style="display:flex;justify-content:space-between;align-items:center;padding:16px 24px;border-bottom:1px solid #e5e7eb"><span style="font-size:16px;font-weight:700">'+t('settingsTitle')+'</span><button onclick="document.getElementById(\'modal-host\').innerHTML=\'\'" style="width:32px;height:32px;border:none;background:#f5f5f4;border-radius:50%;cursor:pointer;font-size:18px">&times;</button></div><div style="padding:20px 24px"><h3 style="font-size:11px;font-weight:700;color:#737373;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">'+t('changePass')+'</h3><form onsubmit="doChangePass(event)" style="display:flex;flex-direction:column;gap:10px"><input id="cp-new" type="password" placeholder="'+t('newPass')+'" style="width:100%;padding:11px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:14px;outline:none;box-sizing:border-box"/><input id="cp-cfm" type="password" placeholder="'+t('confirmPass')+'" style="width:100%;padding:11px 16px;border:1px solid #d1d5db;border-radius:12px;font-size:14px;outline:none;box-sizing:border-box"/><p id="cp-err" style="display:none;color:#dc2626;font-size:12px"></p><p id="cp-ok" style="display:none;color:#059669;font-size:12px">'+t('passChanged')+'</p><button type="submit" style="width:100%;padding:12px;background:#0066ff;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">'+t('savePass')+'</button></form></div></div></div>';
+  document.getElementById('sbg').onclick=function(e){if(e.target.id==='sbg')document.getElementById('modal-host').innerHTML='';};
+}
+
+function doChangePass(e){
+  e.preventDefault();
+  var np=document.getElementById('cp-new').value,cp=document.getElementById('cp-cfm').value;
+  var err=document.getElementById('cp-err'),ok=document.getElementById('cp-ok');
+  err.style.display='none';ok.style.display='none';
+  if(np!==cp){err.textContent=t('passMismatch');err.style.display='block';return;}
+  if(np.length<4){err.textContent='Min 4 characters';err.style.display='block';return;}
+  db.doc('meta/auth').set({pass:np}).then(function(){ok.style.display='block';document.getElementById('cp-new').value='';document.getElementById('cp-cfm').value='';})
+  .catch(function(ex){err.textContent=ex.message;err.style.display='block';});
+}
+
+/* ── MODALS ── */
+function openQuickPayment(en,vn,date,price){if(!isAdmin){openLoginModal();return;}
+  var m=memberByEn(en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';
+  var host=document.getElementById('modal-host');
+  host.innerHTML='<div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" id="qpbg"><div class="bg-surface-white w-full max-w-[400px] rounded-[20px] shadow-modal overflow-hidden" onclick="event.stopPropagation()">'+
+  '<div class="flex items-center justify-between px-6 py-4 border-b border-outline-v/30"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold" style="background:'+bg+';color:'+fg+'">'+initials(en)+'</div><div><div class="text-sm font-bold">'+esc(en)+'</div><div class="text-xs text-txt3">'+esc(vn)+'</div></div></div><button onclick="closeQuickPayment()" class="w-8 h-8 rounded-full hover:bg-surface-low flex items-center justify-center text-txt3"><span class="mi text-[20px]">close</span></button></div>'+
+  '<form id="qpf" class="px-6 py-5 space-y-4" onsubmit="submitQuickPayment(event,\''+esc(en)+'\',\''+esc(vn)+'\')" >'+
+  '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('amount')+'</label><div class="relative flex items-center bg-surface-low rounded-xl px-4 py-2 focus-within:ring-1 focus-within:ring-primary"><input id="qp-amt" name="amount" type="number" inputmode="numeric" value="'+(price||'')+'" placeholder="0" class="w-full bg-transparent border-none p-0 focus:ring-0 text-headline font-bold text-right outline-none" required autofocus/><span class="text-headline text-txt3 ml-2">&#273;</span></div></div>'+
+  '<div class="grid grid-cols-2 gap-3">'+
+  '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('method')+'</label><div class="flex gap-2"><label class="flex-1 cursor-pointer"><input type="radio" name="method" value="Bank Transfer" class="peer sr-only" checked/><div class="text-center py-2 rounded-lg border border-outline-v text-xs peer-checked:bg-primary-c peer-checked:text-white peer-checked:border-primary transition-all flex items-center justify-center gap-1"><span class="mi text-[16px]">account_balance</span>'+t('bankTransfer')+'</div></label><label class="flex-1 cursor-pointer"><input type="radio" name="method" value="Cash" class="peer sr-only"/><div class="text-center py-2 rounded-lg border border-outline-v text-xs peer-checked:bg-primary-c peer-checked:text-white peer-checked:border-primary transition-all flex items-center justify-center gap-1"><span class="mi text-[16px]">payments</span>'+t('cash')+'</div></label></div></div>'+
+  '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('coversDate')+'</label><input name="covers" type="date" value="'+toInputDate(date)+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/></div></div>'+
+  '</form><div class="px-6 py-4 border-t border-outline-v/30 flex justify-end gap-3"><button type="button" onclick="closeQuickPayment()" class="px-5 py-2 rounded-lg text-primary border border-outline-v/30 text-sm font-semibold hover:bg-surface-low">'+t('cancel')+'</button><button type="submit" form="qpf" class="px-5 py-2 rounded-lg bg-primary-c text-white text-sm font-semibold hover:bg-primary shadow-sm">'+t('confirmPayment')+'</button></div></div></div>';
+  document.getElementById('qpbg').onclick=function(e){if(e.target.id==='qpbg')closeQuickPayment();};
+  setTimeout(function(){var a=document.getElementById('qp-amt');if(a)a.focus();},100);
+}
+
+function closeQuickPayment(){document.getElementById('modal-host').innerHTML='';}
+
+function submitQuickPayment(e,en,vn){
+  e.preventDefault();var fd=new FormData(e.target);
+  var payload={en:en,vn:vn,amount:parseInt(fd.get('amount'))||0,covers:fromInputDate(fd.get('covers')),method:fd.get('method')||'Bank Transfer',date:today(),createdAt:new Date()};
+  var btn=e.target.querySelector('button[type=submit]');if(btn)btn.disabled=true;
+  db.collection('payments').add(payload)
+    .then(function(){closeQuickPayment();})
+    .catch(function(err){alert(err.message);if(btn)btn.disabled=false;});
+}
+function openEditModal(type,data){if(!isAdmin){openLoginModal();return;}modal={type:type,mode:'edit',data:data};pendingPhoto=data.photoData||null;renderModal();}
+function closeModal(){modal=null;pendingPhoto=null;compressing=false;saving=false;document.getElementById('modal-host').innerHTML='';}
+
+function renderModal(){
+  var host=document.getElementById('modal-host');if(!modal){host.innerHTML='';return;}
+  var d=modal.data||{};var isEdit=modal.mode==='edit';
+  var title=isEdit?(modal.type==='bill'?t('editBill'):t('editPayment')):(modal.type==='bill'?t('addBill'):t('addPayment'));
+  var memberOpts=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)}).map(function(m){return '<option value="'+m.en+'|'+m.vn+'"'+(isEdit&&d.en===m.en?' selected':'')+'>'+esc(m.en)+' ('+esc(m.vn)+')</option>';}).join('');
+
+  var seg=isEdit?'':'<div class="flex bg-surface-low rounded-lg p-1 mb-5"><button type="button" class="flex-1 py-2 text-sm font-semibold rounded-md transition-all '+(modal.type==='bill'?'bg-surface-white text-txt shadow-sm':'text-txt3')+'" data-mt="bill">'+t('bills')+'</button><button type="button" class="flex-1 py-2 text-sm font-semibold rounded-md transition-all '+(modal.type==='payment'?'bg-surface-white text-txt shadow-sm':'text-txt3')+'" data-mt="payment">'+t('payments')+'</button></div>';
+
+  var photoHtml;
+  if(compressing){photoHtml='<div class="border-2 border-dashed border-outline-v rounded-xl p-8 flex flex-col items-center"><span class="mi text-[32px] text-txt3 mb-2">hourglass_empty</span><p class="text-sm text-txt2">'+t('compressing')+'</p></div>';
+  }else if(pendingPhoto){photoHtml='<div class="relative rounded-xl overflow-hidden bg-black"><img src="'+pendingPhoto+'" class="w-full max-h-48 object-contain"/><button type="button" class="absolute top-2 right-2 bg-black/60 text-white w-7 h-7 rounded-full flex items-center justify-center backdrop-blur" id="rmimg">&times;</button></div><label for="photo" class="block text-center text-xs text-primary font-semibold mt-2 cursor-pointer">'+t('replace')+'</label><input type="file" id="photo" accept="image/*">';
+  }else{photoHtml='<label for="photo" class="border-2 border-dashed border-outline-v rounded-xl p-8 flex flex-col items-center cursor-pointer hover:bg-surface-low transition-colors group"><span class="mi text-[32px] text-outline group-hover:text-primary mb-2">upload_file</span><p class="text-sm text-txt2">'+t('dragDrop')+'</p><p class="text-xs text-txt3 mt-1">'+t('maxSize')+'</p></label><input type="file" id="photo" accept="image/*">';}
+
+  var form;
+  if(modal.type==='bill'){
+    // Build member order details section
+    var existingItems=(d.items||[]);
+    var itemMap={};existingItems.forEach(function(it){itemMap[it.en]=it;});
+    var memberList='';
+    var sortedMembers=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
+    sortedMembers.forEach(function(m,idx){
+      var item=itemMap[m.en];var checked=!!item;
+      var bg=m.bg||'#e6e8ea',fg=m.fg||'#424656';
+      var cardSt=checked?'border-radius:10px;padding:12px;border:2px solid #0066ff;background:rgba(0,102,255,.05)':'border-radius:10px;padding:12px;border:1px solid #d1d5db;background:#f9fafb';
+      memberList+='<div style="'+cardSt+'" id="mi-'+idx+'">';
+      memberList+='<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" style="width:18px;height:18px;accent-color:#0066ff;cursor:pointer;flex-shrink:0" data-mi="'+idx+'" onchange="toggleMemberItem('+idx+')"'+(checked?' checked':'')+'"/>';
+      memberList+='<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style="background:'+bg+';color:'+fg+'">'+initials(m.en)+'</div>';
+      memberList+='<div class="flex-1 min-w-0"><p class="text-sm font-semibold">'+esc(m.en)+'</p><p class="text-xs text-txt3">'+esc(m.vn)+'</p></div></div>';
+      memberList+='<div class="grid grid-cols-2 gap-2 mt-2'+(checked?'':' hidden')+'" id="mi-fields-'+idx+'">';
+      memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('dish')+'</label><input name="dish_'+idx+'" value="'+esc(item?item.dish:'')+'" placeholder="Ph\u1edf b\u00f2..." class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm focus:ring-1 focus:ring-primary outline-none mt-0.5"/></div>';
+      memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('price')+'</label><div class="relative"><input name="price_'+idx+'" type="number" inputmode="numeric" value="'+(item?item.price:'')+'" placeholder="0" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right focus:ring-1 focus:ring-primary outline-none mt-0.5"/><span class="absolute right-2 top-1/2 text-[11px] text-txt3">&#273;</span></div></div>';
+      memberList+='</div></div>';
+    });
+
+    form='<div class="space-y-4"><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('total')+'</label><div class="relative flex items-center bg-surface-low rounded-xl px-4 py-2 focus-within:ring-1 focus-within:ring-primary"><input name="total" type="number" inputmode="numeric" value="'+(d.total||'')+'" placeholder="0" class="w-full bg-transparent border-none p-0 focus:ring-0 text-headline font-bold text-right outline-none" required/><span class="text-headline text-txt3 ml-2">&#273;</span></div></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('date')+'</label><input name="date" type="date" value="'+toInputDate(d.date||today())+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('note')+'</label><textarea name="note" placeholder="Com Ga Xe x4..." class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none resize-y min-h-[60px]">'+esc(d.note||'')+'</textarea></div>'+
+    '<div><div class="flex justify-between items-center mb-2"><label class="text-label font-bold text-txt3 uppercase tracking-wider">'+t('orderDetails')+'</label><div class="flex items-center gap-3"><label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="selectAllMembers" onchange="toggleAllMembers(this.checked)" class="rounded border-outline-v text-primary focus:ring-primary h-4 w-4"/><span class="text-xs text-txt3">'+t('selectAll')+'</span></label><span class="bg-surface-high px-2 py-0.5 rounded-full text-label text-primary" id="memberCount">0</span></div></div><div class="space-y-2" id="memberItems">'+memberList+'</div></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('photo')+'</label>'+photoHtml+'</div></div>';
+  }else{
+    form='<div class="space-y-4"><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('person')+'</label><select name="member" required class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"><option value="">'+t('select')+'</option>'+memberOpts+'</select></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('amount')+'</label><div class="relative flex items-center bg-surface-low rounded-xl px-4 py-2 focus-within:ring-1 focus-within:ring-primary"><input name="amount" type="number" inputmode="numeric" value="'+(d.amount||'')+'" placeholder="0" class="w-full bg-transparent border-none p-0 focus:ring-0 text-headline font-bold text-right outline-none" required/><span class="text-headline text-txt3 ml-2">&#273;</span></div></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('coversDate')+'</label><input name="covers" type="date" value="'+toInputDate(d.covers||today())+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/></div>'+
+    '<div class="grid grid-cols-2 gap-3"><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('method')+'</label><div class="flex gap-2"><label class="flex-1 cursor-pointer"><input type="radio" name="method" value="Bank Transfer" class="peer sr-only"'+(d.method!=='Cash'?' checked':'')+'/><div class="text-center py-2 rounded-lg border border-outline-v text-sm peer-checked:bg-primary-c peer-checked:text-white peer-checked:border-primary transition-all flex items-center justify-center gap-1"><span class="mi text-[18px]">account_balance</span>'+t('bankTransfer')+'</div></label><label class="flex-1 cursor-pointer"><input type="radio" name="method" value="Cash" class="peer sr-only"'+(d.method==='Cash'?' checked':'')+'/><div class="text-center py-2 rounded-lg border border-outline-v text-sm peer-checked:bg-primary-c peer-checked:text-white peer-checked:border-primary transition-all flex items-center justify-center gap-1"><span class="mi text-[18px]">payments</span>'+t('cash')+'</div></label></div></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('date')+'</label><input name="date" type="date" value="'+toInputDate(d.date||today())+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/></div></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('photo')+'</label>'+photoHtml+'</div></div>';
+  }
+
+  host.innerHTML='<div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" id="bg"><div class="bg-surface-white w-full max-w-[480px] rounded-[20px] shadow-modal flex flex-col overflow-hidden max-h-[90vh]" onclick="event.stopPropagation()"><div class="flex items-center justify-between px-6 py-4 border-b border-outline-v/30"><h2 class="text-title font-bold">'+title+'</h2><button class="w-8 h-8 rounded-full hover:bg-surface-low flex items-center justify-center text-txt3 transition-colors" id="xbtn"><span class="mi text-[20px]">close</span></button></div>'+seg+'<form id="f" class="px-6 py-4 overflow-y-auto flex-1">'+form+'</form><div class="px-6 py-4 border-t border-outline-v/30 flex justify-end gap-3"><button type="button" onclick="closeModal()" class="px-5 py-2 rounded-lg text-primary border border-outline-v/30 text-sm font-semibold hover:bg-surface-low transition-colors">'+t('cancel')+'</button>'+(isEdit?'<button type="button" id="delbtn" class="px-5 py-2 rounded-lg text-error border border-error-c text-sm font-semibold hover:bg-error-c/20 transition-colors">'+t('delete')+'</button>':'')+'<button type="submit" form="f" class="px-5 py-2 rounded-lg bg-primary-c text-white text-sm font-semibold hover:bg-primary transition-colors shadow-sm"'+(saving?' disabled':'')+'>'+((saving?'...':(modal.type==='bill'?t('saveBill'):t('confirmPayment'))))+'</button></div></div></div>';
+
+  document.getElementById('xbtn').onclick=closeModal;
+  document.getElementById('bg').onclick=function(e){if(e.target.id==='bg')closeModal();};
+  if(!isEdit){document.querySelectorAll('[data-mt]').forEach(function(b){b.onclick=function(){modal.type=b.getAttribute('data-mt');pendingPhoto=null;renderModal();};});}
+
+  // Fix: programmatically set .checked property (innerHTML attr alone is unreliable)
+  if(modal.type==='bill'){
+    var sortedM=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
+    var existItems=(modal.data&&modal.data.items)||[];
+    var itemMap2={};existItems.forEach(function(it){itemMap2[it.en]=it;});
+    sortedM.forEach(function(m,idx){
+      var cb=document.querySelector('[data-mi="'+idx+'"]');
+      if(cb){
+        var shouldCheck=!!itemMap2[m.en];
+        cb.checked=shouldCheck;
+        // Also fix card style
+        var card=document.getElementById('mi-'+idx);
+        var fields=document.getElementById('mi-fields-'+idx);
+        if(card){card.style.border=shouldCheck?'2px solid #0066ff':'1px solid #d1d5db';card.style.background=shouldCheck?'rgba(0,102,255,.05)':'#f9fafb';}
+        if(fields){if(shouldCheck)fields.classList.remove('hidden');else fields.classList.add('hidden');}
+      }
+    });
+    updateMemberCount();
+  }
+  var pi=document.getElementById('photo');
+  if(pi){pi.onchange=function(e){var f=e.target.files&&e.target.files[0];if(!f)return;
+    compressing=true;renderModal();
+    compressImage(f,1200,0.75).then(function(url){return url.length>900000?compressImage(f,900,0.6):url;})
+    .then(function(url){if(url.length>900000){alert('Too large');pendingPhoto=null;}else pendingPhoto=url;compressing=false;renderModal();})
+    .catch(function(){pendingPhoto=null;compressing=false;renderModal();});};}
+  var rm=document.getElementById('rmimg');if(rm)rm.onclick=function(){pendingPhoto=null;renderModal();};
+  if(isEdit&&document.getElementById('delbtn')){document.getElementById('delbtn').onclick=function(){
+    if(!confirm(t('delete')+'?'))return;
+    db.collection(modal.type==='bill'?'bills':'payments').doc(modal.data.id).delete().then(closeModal).catch(function(err){alert(err.message);});};}
+  document.getElementById('f').onsubmit=handleSubmit;
+}
+
+function handleSubmit(e){
+  e.preventDefault();if(saving||compressing)return;saving=true;
+  var fd=new FormData(e.target);var payload,coll;
+  if(modal.type==='bill'){
+    coll='bills';payload={date:fd.get('date'),total:parseInt(fd.get('total'))||0,note:fd.get('note')||''};
+    // Collect member items
+    var items=[];var sortedM=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
+    sortedM.forEach(function(m,idx){
+      var cb=document.querySelector('[data-mi="'+idx+'"]');
+      if(cb&&cb.checked){
+        var dish=fd.get('dish_'+idx)||'';var price=parseInt(fd.get('price_'+idx))||0;
+        items.push({en:m.en,dish:dish,price:price});
+      }
+    });
+    payload.items=items; // always save, empty array = no items
+  }else{
+    coll='payments';var parts=(fd.get('member')||'|').split('|');
+    payload={en:parts[0],vn:parts[1]||'',amount:parseInt(fd.get('amount'))||0,covers:fromDateInput(fd.get('covers')),method:fd.get('method')||'Bank Transfer',date:fromDateInput(fd.get('date'))};
+  }
+  if(pendingPhoto)payload.photoData=pendingPhoto;
+  else if(modal.mode==='edit'&&modal.data.photoData&&!pendingPhoto)payload.photoData=firebase.firestore.FieldValue.delete();
+  renderModal();var op;
+  if(modal.mode==='edit')op=db.collection(coll).doc(modal.data.id).update(payload);
+  else{payload.createdAt=new Date();op=db.collection(coll).add(payload);}
+  op.then(function(){saving=false;closeModal();}).catch(function(err){alert(err.message);saving=false;renderModal();});
+}
+
+/* ── Member item toggles ── */
+function toggleMemberItem(idx){
+  var cb=document.querySelector('[data-mi="'+idx+'"]');
+  var fields=document.getElementById('mi-fields-'+idx);
+  var card=document.getElementById('mi-'+idx);
+  if(cb&&fields&&card){
+    if(cb.checked){
+      fields.classList.remove('hidden');
+      card.style.border='2px solid #0066ff';
+      card.style.background='rgba(0,102,255,.05)';
+    }else{
+      fields.classList.add('hidden');
+      card.style.border='1px solid #d1d5db';
+      card.style.background='#f9fafb';
+    }
+  }
+  updateMemberCount();
+}
+function toggleAllMembers(checked){
+  var cbs=document.querySelectorAll('[data-mi]');
+  cbs.forEach(function(cb,idx){cb.checked=checked;toggleMemberItem(idx);});
+}
+function updateMemberCount(){
+  var cnt=document.querySelectorAll('[data-mi]:checked').length;
+  var el=document.getElementById('memberCount');
+  if(el)el.textContent=cnt+' '+t('people');
+}
+
+/* ── REALTIME ── */
+db.collection('bills').orderBy('createdAt').onSnapshot(function(snap){bills=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});bOk=true;render();});
+db.collection('payments').orderBy('createdAt').onSnapshot(function(snap){payments=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});pOk=true;render();});
+db.collection('members').onSnapshot(function(snap){members=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});mOk=true;render();});
+document.getElementById('tab-content').innerHTML='<div class="text-center text-txt3 py-12">Connecting...</div>';
+
+/* ── SEED MEMBERS ── */
+db.doc('meta/members_seeded').get().then(function(doc){
+  if(!doc.exists){
+    var seed=[
+      {en:'Malie',vn:'Hoa',bg:'#fce7f3',fg:'#831843',order:1},
+      {en:'Emily',vn:'Nhi',bg:'#dcfce7',fg:'#166534',order:2},
+      {en:'Gerard',vn:'Duc',bg:'#ede9fe',fg:'#5b21b6',order:3},
+      {en:'Parker',vn:'Hung',bg:'#fef9c3',fg:'#713f12',order:4},
+      {en:'Duke',vn:'Duong',bg:'#fee2e2',fg:'#991b1b',order:5},
+      {en:'Currie',vn:'Cuong',bg:'#d1fae5',fg:'#064e3b',order:6},
+      {en:'Nero',vn:'Nguyen',bg:'#fce7f3',fg:'#831843',order:7},
+      {en:'Gracie',vn:'Tuyet',bg:'#f3f4f6',fg:'#374151',order:8},
+      {en:'Vin',vn:'Vu',bg:'#fef3c7',fg:'#92400e',order:9}
+    ];
+    var batch=db.batch();seed.forEach(function(m){batch.set(db.collection('members').doc(),m);});
+    batch.set(db.doc('meta/members_seeded'),{done:true});batch.commit();
+  }
+});
+</script>
+</body>
+</html>
