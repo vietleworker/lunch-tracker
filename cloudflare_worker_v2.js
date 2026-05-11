@@ -451,39 +451,92 @@ export default {
         const txYear = txD.getFullYear();
         const txMonth = txD.getMonth();
 
-        // Smart date detection from content
-        // Patterns: "parker 11 12", "emily 11", "duke 11 12 13", "nero" (no date = today)
-        const dayNums = content.match(/\b(\d{1,2})\b/g);
+        // Smart content parsing
+        // Format: "name [amount day] [amount day] ..."
+        // Examples: "parker" → 1 payment today
+        //           "parker 50 11 40 12" → 50k day 11, 40k day 12
+        //           "parker 11 12" → split evenly day 11 & 12
+        const txYear = txD.getFullYear();
+        const txMonth = txD.getMonth();
+        const todayDay = txD.getDate();
+
+        // Extract all numbers from content (after removing member name)
+        const cleanContent = content.replace(matched.en.toLowerCase(), "").replace(matched.vn.toLowerCase(), "").replace(/k/gi, "").trim();
+        const nums = cleanContent.match(/\d+/g);
+
         let coversDates = [];
-        if (dayNums && dayNums.length > 0) {
-          // Filter valid days (1-31) and not likely amounts (>31)
-          const validDays = dayNums.map(Number).filter(d => d >= 1 && d <= 31);
-          if (validDays.length > 0) {
-            coversDates = validDays.map(d => {
-              const dd = String(d).padStart(2, "0");
-              return dd + " " + months[txMonth] + " " + txYear;
-            });
+
+        if (!nums || nums.length === 0) {
+          // No numbers → covers today, full amount
+          coversDates = [{ day: todayDay, amt: amount }];
+        } else {
+          // Check if pairs: amount+day pattern
+          // Numbers > 31 are amounts (in thousands), numbers 1-31 are days
+          const allNums = nums.map(Number);
+          const amounts = [];
+          const days = [];
+
+          // Try to detect pairs: look at sequence
+          // If alternating big/small: "50 11 40 12" → pairs
+          // If all small (1-31): "11 12 13" → just days, split evenly
+          const hasLargeNums = allNums.some(n => n > 31);
+
+          if (hasLargeNums) {
+            // Parse as [amount, day] pairs
+            for (let i = 0; i < allNums.length; i++) {
+              if (allNums[i] > 31) {
+                amounts.push(allNums[i] * 1000); // convert to VND
+                if (i + 1 < allNums.length && allNums[i + 1] >= 1 && allNums[i + 1] <= 31) {
+                  days.push(allNums[i + 1]);
+                  i++; // skip day
+                } else {
+                  days.push(todayDay); // no day specified, use today
+                }
+              } else if (allNums[i] >= 1 && allNums[i] <= 31) {
+                // Standalone day without preceding amount
+                days.push(allNums[i]);
+                amounts.push(0); // will be filled later
+              }
+            }
+            // Fill 0 amounts: split remaining evenly
+            const totalSpecified = amounts.reduce((s, a) => s + a, 0);
+            const zeroCount = amounts.filter(a => a === 0).length;
+            if (zeroCount > 0 && totalSpecified < amount) {
+              const perZero = Math.round((amount - totalSpecified) / zeroCount);
+              for (let i = 0; i < amounts.length; i++) {
+                if (amounts[i] === 0) amounts[i] = perZero;
+              }
+            }
+            for (let i = 0; i < days.length; i++) {
+              coversDates.push({ day: days[i], amt: amounts[i] || Math.round(amount / days.length) });
+            }
+          } else {
+            // All small numbers = just days, split amount evenly
+            const validDays = allNums.filter(d => d >= 1 && d <= 31);
+            if (validDays.length > 0) {
+              const perDay = Math.round(amount / validDays.length);
+              for (let i = 0; i < validDays.length; i++) {
+                const dayAmt = (i === validDays.length - 1) ? amount - perDay * (validDays.length - 1) : perDay;
+                coversDates.push({ day: validDays[i], amt: dayAmt });
+              }
+            } else {
+              coversDates = [{ day: todayDay, amt: amount }];
+            }
           }
         }
-        // Default: covers = transaction date
-        if (coversDates.length === 0) {
-          coversDates = [txD.getDate().toString().padStart(2,"0") + " " + months[txMonth] + " " + txYear];
-        }
 
-        // Split amount evenly across days
-        const perDay = Math.round(amount / coversDates.length);
+        // Create payments
         const created = [];
-
-        for (let i = 0; i < coversDates.length; i++) {
-          // Last day gets remainder to avoid rounding errors
-          const dayAmount = (i === coversDates.length - 1) ? amount - perDay * (coversDates.length - 1) : perDay;
+        for (const cd of coversDates) {
+          const dd = String(cd.day).padStart(2, "0");
+          const coversStr = dd + " " + months[txMonth] + " " + txYear;
 
           const paymentPayload = {
             fields: {
               en: { stringValue: matched.en },
               vn: { stringValue: matched.vn },
-              amount: { integerValue: String(dayAmount) },
-              covers: { stringValue: coversDates[i] },
+              amount: { integerValue: String(cd.amt) },
+              covers: { stringValue: coversStr },
               date: { stringValue: todayStr },
               method: { stringValue: "Bank Transfer" },
               source: { stringValue: "sepay_webhook" },
@@ -497,7 +550,7 @@ export default {
             method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
             body: JSON.stringify(paymentPayload)
           });
-          created.push({ covers: coversDates[i], amount: dayAmount });
+          created.push({ covers: coversStr, amount: cd.amt });
         }
 
         return new Response(JSON.stringify({
