@@ -446,34 +446,63 @@ export default {
         // Parse date: "2023-03-25 14:02:37" → "25 Mar 2023"
         const txD = new Date(txDate.replace(" ", "T"));
         const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        const coversDate = txD.getDate().toString().padStart(2,"0") + " " + months[txD.getMonth()] + " " + txD.getFullYear();
         const todayD = new Date();
         const todayStr = todayD.getDate().toString().padStart(2,"0") + " " + months[todayD.getMonth()] + " " + todayD.getFullYear();
+        const txYear = txD.getFullYear();
+        const txMonth = txD.getMonth();
 
-        // Create payment
-        const paymentPayload = {
-          fields: {
-            en: { stringValue: matched.en },
-            vn: { stringValue: matched.vn },
-            amount: { integerValue: String(amount) },
-            covers: { stringValue: coversDate },
-            date: { stringValue: todayStr },
-            method: { stringValue: "Bank Transfer" },
-            source: { stringValue: "sepay_webhook" },
-            sepayId: { integerValue: String(txId) },
-            refCode: { stringValue: refCode },
-            createdAt: { timestampValue: new Date().toISOString() }
+        // Smart date detection from content
+        // Patterns: "parker 11 12", "emily 11", "duke 11 12 13", "nero" (no date = today)
+        const dayNums = content.match(/\b(\d{1,2})\b/g);
+        let coversDates = [];
+        if (dayNums && dayNums.length > 0) {
+          // Filter valid days (1-31) and not likely amounts (>31)
+          const validDays = dayNums.map(Number).filter(d => d >= 1 && d <= 31);
+          if (validDays.length > 0) {
+            coversDates = validDays.map(d => {
+              const dd = String(d).padStart(2, "0");
+              return dd + " " + months[txMonth] + " " + txYear;
+            });
           }
-        };
+        }
+        // Default: covers = transaction date
+        if (coversDates.length === 0) {
+          coversDates = [txD.getDate().toString().padStart(2,"0") + " " + months[txMonth] + " " + txYear];
+        }
 
-        await fetch(`${FSURL}/payments`, {
-          method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify(paymentPayload)
-        });
+        // Split amount evenly across days
+        const perDay = Math.round(amount / coversDates.length);
+        const created = [];
+
+        for (let i = 0; i < coversDates.length; i++) {
+          // Last day gets remainder to avoid rounding errors
+          const dayAmount = (i === coversDates.length - 1) ? amount - perDay * (coversDates.length - 1) : perDay;
+
+          const paymentPayload = {
+            fields: {
+              en: { stringValue: matched.en },
+              vn: { stringValue: matched.vn },
+              amount: { integerValue: String(dayAmount) },
+              covers: { stringValue: coversDates[i] },
+              date: { stringValue: todayStr },
+              method: { stringValue: "Bank Transfer" },
+              source: { stringValue: "sepay_webhook" },
+              sepayId: { integerValue: String(txId) },
+              refCode: { stringValue: refCode },
+              createdAt: { timestampValue: new Date().toISOString() }
+            }
+          };
+
+          await fetch(`${FSURL}/payments`, {
+            method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(paymentPayload)
+          });
+          created.push({ covers: coversDates[i], amount: dayAmount });
+        }
 
         return new Response(JSON.stringify({
           success: true, matched: true,
-          member: matched.en, amount, covers: coversDate, sepayId: txId
+          member: matched.en, amount, payments: created, sepayId: txId
         }), { headers: H });
 
       } catch (e) {
