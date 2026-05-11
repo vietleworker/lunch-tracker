@@ -352,6 +352,126 @@ export default {
     }
 
     // POST = action
+    const url2 = new URL(request.url);
+
+    // ═══ SePay Webhook — auto-create payments from bank transfers ═══
+    if (url2.pathname === "/webhook/sepay") {
+      try {
+        const body = await request.json();
+        // Only process incoming transfers
+        if (body.transferType !== "in") {
+          return new Response(JSON.stringify({ success: true, skipped: "outgoing transfer" }), { headers: H });
+        }
+
+        const amount = body.transferAmount || 0;
+        const content = (body.content || "").toLowerCase();
+        const desc = (body.description || "").toLowerCase();
+        const txId = body.id;
+        const txDate = body.transactionDate || new Date().toISOString();
+        const refCode = body.referenceCode || "";
+
+        // Load members from Firestore
+        const token = await getToken();
+        const mRes = await fetch(`${FSURL}/members`, { headers: { Authorization: `Bearer ${token}` } });
+        const mData = await mRes.json();
+        const members = (mData.documents || []).map(d => {
+          const f = d.fields || {};
+          return { en: f.en?.stringValue || "", vn: f.vn?.stringValue || "" };
+        });
+
+        // Match member by content/description
+        let matched = null;
+        const searchText = content + " " + desc;
+        // Try exact EN name match first, then VN name
+        for (const m of members) {
+          if (m.en && searchText.includes(m.en.toLowerCase())) { matched = m; break; }
+        }
+        if (!matched) {
+          for (const m of members) {
+            if (m.vn && m.vn.length >= 2 && searchText.includes(m.vn.toLowerCase())) { matched = m; break; }
+          }
+        }
+        // Also match bank transfer names (common VN full names)
+        if (!matched) {
+          const nameMap = {
+            "hoa": "Malie", "nhi": "Emily", "uyen nhi": "Emily",
+            "duc": "Gerard", "hung": "Parker", "duong": "Duke",
+            "cuong": "Currie", "nguyen": "Nero", "tuyet": "Gracie",
+            "vu": "Vin", "viet": "Victor", "khanh": "Jimmy"
+          };
+          for (const [key, en] of Object.entries(nameMap)) {
+            if (searchText.includes(key)) {
+              matched = members.find(m => m.en === en);
+              if (matched) break;
+            }
+          }
+        }
+
+        if (!matched) {
+          // Can't match — store as unmatched for manual review
+          const unmatchedPayload = {
+            fields: {
+              type: { stringValue: "unmatched_transfer" },
+              amount: { integerValue: String(amount) },
+              content: { stringValue: body.content || "" },
+              description: { stringValue: body.description || "" },
+              txId: { integerValue: String(txId) },
+              txDate: { stringValue: txDate },
+              refCode: { stringValue: refCode },
+              createdAt: { timestampValue: new Date().toISOString() }
+            }
+          };
+          await fetch(`${FSURL}/webhook_log`, {
+            method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(unmatchedPayload)
+          });
+          return new Response(JSON.stringify({ success: true, matched: false, content: body.content }), { headers: H });
+        }
+
+        // Check duplicate by SePay txId
+        const dupCheck = await fetch(
+          `${FSURL}/payments?pageSize=1`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // Parse date: "2023-03-25 14:02:37" → "25 Mar 2023"
+        const txD = new Date(txDate.replace(" ", "T"));
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const coversDate = txD.getDate().toString().padStart(2,"0") + " " + months[txD.getMonth()] + " " + txD.getFullYear();
+        const todayD = new Date();
+        const todayStr = todayD.getDate().toString().padStart(2,"0") + " " + months[todayD.getMonth()] + " " + todayD.getFullYear();
+
+        // Create payment
+        const paymentPayload = {
+          fields: {
+            en: { stringValue: matched.en },
+            vn: { stringValue: matched.vn },
+            amount: { integerValue: String(amount) },
+            covers: { stringValue: coversDate },
+            date: { stringValue: todayStr },
+            method: { stringValue: "Bank Transfer" },
+            source: { stringValue: "sepay_webhook" },
+            sepayId: { integerValue: String(txId) },
+            refCode: { stringValue: refCode },
+            createdAt: { timestampValue: new Date().toISOString() }
+          }
+        };
+
+        await fetch(`${FSURL}/payments`, {
+          method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(paymentPayload)
+        });
+
+        return new Response(JSON.stringify({
+          success: true, matched: true,
+          member: matched.en, amount, covers: coversDate, sepayId: txId
+        }), { headers: H });
+
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, error: e.message }), { status: 500, headers: H });
+      }
+    }
+    // ═══ End SePay Webhook ═══
     try {
       let p = await request.formData().catch(() => null);
       let action, secret;
