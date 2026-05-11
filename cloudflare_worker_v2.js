@@ -231,6 +231,8 @@ function today() {
 const H = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 
 // ── Main handler ─────────────────────────────────────
+const SEPAY_TOKEN = "1SGB9JS0P5C7Z1PEUHSRYWUC6FOKFBHWQIIFMTN5DWD8IQ7MJUN4MZBGR9XRGKET";
+
 export default {
   async fetch(request) {
     // CORS preflight
@@ -357,6 +359,13 @@ export default {
     // ═══ SePay Webhook — auto-create payments from bank transfers ═══
     if (url2.pathname === "/webhook/sepay") {
       try {
+        // Verify SePay authorization
+        const authHeader = request.headers.get("Authorization") || "";
+        const sepayKey = authHeader.replace("Apikey ", "").replace("Bearer ", "").trim();
+        if (sepayKey !== SEPAY_TOKEN) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: H });
+        }
+
         const body = await request.json();
         // Only process incoming transfers
         if (body.transferType !== "in") {
