@@ -456,8 +456,6 @@ export default {
         // Examples: "parker" → 1 payment today
         //           "parker 50 11 40 12" → 50k day 11, 40k day 12
         //           "parker 11 12" → split evenly day 11 & 12
-        const txYear = txD.getFullYear();
-        const txMonth = txD.getMonth();
         const todayDay = txD.getDate();
 
         // Extract all numbers from content (after removing member name)
