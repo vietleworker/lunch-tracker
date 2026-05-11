@@ -31,6 +31,11 @@ body{-webkit-font-smoothing:antialiased}
 .mi-f{font-variation-settings:'FILL' 1,'wght' 400}
 .shadow-card{box-shadow:0 4px 20px rgba(0,0,0,.04)}
 .shadow-modal{box-shadow:0 20px 40px rgba(0,102,255,.1)}
+
+.tip{position:relative;cursor:help}
+.tip:hover .tipbox,.tip:active .tipbox{display:block}
+.tipbox{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1c1917;color:#fff;font-size:11px;font-weight:500;padding:6px 10px;border-radius:8px;white-space:nowrap;z-index:50;line-height:1.4;pointer-events:none}
+.tipbox::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1c1917}
 .prog{height:6px;background:#e6e8ea;border-radius:3px;overflow:hidden}
 .prog-bar{height:100%;border-radius:3px;transition:width .4s}
 input[type=file]{display:none}
@@ -398,11 +403,11 @@ function renderOverview(){
 
     // Badges
     var badges='';
-    if(s.avgSpeed>=5)badges+='<span style="background:#dcfce7;color:#166534;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">bolt</span>Speed</span>';
-    else if(s.avgSpeed>0&&s.avgSpeed<=2)badges+='<span style="background:#fef2f2;color:#991b1b;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">schedule</span>Slow</span>';
-    if(s.avgMeal>0&&s.avgMeal<=35000)badges+='<span style="background:#fef9c3;color:#854d0e;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">eco</span>Budget</span>';
-    else if(s.avgMeal>=45000)badges+='<span style="background:#fce7f3;color:#831843;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">local_fire_department</span>Big $</span>';
-    if(s.daysEaten>0&&s.daysEaten===s.totalBillDays)badges+='<span style="background:#e0e7ff;color:#3730a3;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">event_available</span>100%</span>';
+    if(s.avgSpeed>=5)badges+='<span class="tip" style="background:#dcfce7;color:#166534;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">bolt</span>Speed</span><div class="tipbox">Pays on the same day \u2605\u2605\u2605\u2605\u2605</div></span>';
+    else if(s.avgSpeed>0&&s.avgSpeed<=2)badges+='<span class="tip" style="background:#fef2f2;color:#991b1b;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">schedule</span>Slow<span class="tipbox">Takes 3+ days to pay</span></span>';
+    if(s.avgMeal>0&&s.avgMeal<=35000)badges+='<span class="tip" style="background:#fef9c3;color:#854d0e;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">eco</span>Budget<span class="tipbox">Average meal \u2264 35k</span></span>';
+    else if(s.avgMeal>=45000)badges+='<span class="tip" style="background:#fce7f3;color:#831843;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">local_fire_department</span>Big $<span class="tipbox">Average meal \u2265 45k</span></span>';
+    if(s.daysEaten>0&&s.daysEaten===s.totalBillDays)badges+='<span class="tip" style="background:#e0e7ff;color:#3730a3;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">event_available</span>100%<span class="tipbox">Eats every day this week</span></span>';
 
     // Stars
     var stars='';
@@ -424,9 +429,9 @@ function renderOverview(){
 
     // Stats row
     cardsHtml+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;border-top:1px solid #f0f0f0;padding-top:10px;text-align:center">';
-    cardsHtml+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Avg meal</div><div class="text-sm font-bold">'+(s.avgMeal>0?fmtK(s.avgMeal):'--')+'</div></div>';
-    cardsHtml+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Pay speed</div><div style="font-size:12px;letter-spacing:-1px">'+(s.avgSpeed>0?stars:'--')+'</div></div>';
-    cardsHtml+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Attendance</div><div class="text-sm font-bold">'+s.daysEaten+'/'+s.totalBillDays+'</div></div>';
+    cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Avg meal</div><div class="text-sm font-bold">'+(s.avgMeal>0?fmtK(s.avgMeal):'--')+'</div><div class="tipbox">Average price per meal from bill items</div></div>';
+    cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Pay speed</div><div style="font-size:12px;letter-spacing:-1px">'+(s.avgSpeed>0?stars:'--')+'</div><div class="tipbox">Same day=5\u2605 +1d=4\u2605 +2d=3\u2605 +3d=2\u2605 later=1\u2605</div></div>';
+    cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Attendance</div><div class="text-sm font-bold">'+s.daysEaten+'/'+s.totalBillDays+'</div><div class="tipbox">Days eaten / total bill days this week</div></div>';
     cardsHtml+='</div>';
 
     // Favorite dish or unpaid alert
