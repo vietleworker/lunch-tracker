@@ -185,23 +185,43 @@ function fromInputDate(v){
   return d.getDate().toString().padStart(2,'0')+' '+d.toLocaleString('en-US',{month:'short'})+' '+d.getFullYear();}
   catch(e){return v;}
 }
-function dayOfWeek(ds){try{var d=new Date(ds);if(isNaN(d))return'';var days=lang==='vi'?['CN','T2','T3','T4','T5','T6','T7']:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];return days[d.getDay()];}catch(e){return'';}}
+function dayOfWeek(ds){try{
+  if(!ds)return'';
+  // Add T12:00 for ISO dates to avoid timezone issues
+  var d=ds.match(/^\d{4}-\d{2}-\d{2}$/)?new Date(ds+'T12:00:00'):new Date(ds);
+  if(isNaN(d))return'';
+  var days=lang==='vi'?['CN','T2','T3','T4','T5','T6','T7']:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  return days[d.getDay()];}catch(e){return'';}}
 function esc(s){if(!s)return'';var m={'&':'&amp;','<':'&lt;','>':'&gt;'};return String(s).replace(/[&<>]/g,function(c){return m[c]||c})}
 function memberByEn(en){for(var i=0;i<members.length;i++)if(members[i].en===en)return members[i];return null}
 function initials(en){return(en||'?').slice(0,2).toUpperCase()}
 function tsOf(d){return d.createdAt?(d.createdAt.toMillis?d.createdAt.toMillis():new Date(d.createdAt).getTime()):0}
 
+function normDate(ds){
+  if(!ds)return'';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(ds))return ds;
+  try{var d=new Date(ds);if(!isNaN(d))return d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0')+'-'+d.getDate().toString().padStart(2,'0');}catch(e){}
+  return ds;
+}
+function displayDate(ds){
+  // Show any date as "11 May 2026"
+  if(!ds)return'';
+  var d=ds.match(/^\d{4}-\d{2}-\d{2}$/)?new Date(ds+'T12:00:00'):new Date(ds);
+  if(isNaN(d))return ds;
+  return d.getDate().toString().padStart(2,'0')+' '+d.toLocaleString('en-US',{month:'short'})+' '+d.getFullYear();
+}
+
 function paymentsForBill(bill){
-  var bdate=bill.date||'';var bm=bdate.match(/(\d+)\s+([A-Za-z]+)/);if(!bm)return[];
-  var bday=bm[1],bmonth=bm[2];
-  return payments.filter(function(p){var c=p.covers||p.date||'';if(c===bdate)return true;
-    var cm=c.match(/([A-Za-z]+)/);if(!cm||cm[1]!==bmonth)return false;
-    var days=(c.match(/\d+/g)||[]).filter(function(d){return d.length<=2;});
-    return days.some(function(d){return parseInt(d)===parseInt(bday);});});
+  var billNorm=normDate(bill.date);
+  if(!billNorm)return[];
+  return payments.filter(function(p){
+    var covers=p.covers||p.date||'';
+    return normDate(covers)===billNorm;
+  });
 }
 
 function getWeekKey(dateStr){
-  try{var d=new Date(dateStr);if(isNaN(d))return'other';
+  try{var d=dateStr&&dateStr.match(/^\d{4}-\d{2}-\d{2}$/)?new Date(dateStr+'T12:00:00'):new Date(dateStr);if(isNaN(d))return'other';
   var now=new Date();var startOfWeek=new Date(now);startOfWeek.setDate(now.getDate()-now.getDay());startOfWeek.setHours(0,0,0,0);
   var endOfWeek=new Date(startOfWeek);endOfWeek.setDate(startOfWeek.getDate()+7);
   var lastWeekStart=new Date(startOfWeek);lastWeekStart.setDate(startOfWeek.getDate()-7);
@@ -251,23 +271,103 @@ function switchTab(t2){tab=t2;renderAll();}
 
 /* ── OVERVIEW ── */
 function calcMemberBalances(){
-  // For each member: which bill dates are they in items but haven't paid?
   var status={};
-  members.forEach(function(m){status[m.en]={unpaidDates:[],paidDates:[],totalPaid:0};});
-  payments.forEach(function(p){if(status[p.en])status[p.en].totalPaid+=(p.amount||0);});
+  members.forEach(function(m){status[m.en]={unpaidDates:[],paidDates:[],totalPaid:0,totalOwed:0};});
+  
+  // Only count payments for THIS WEEK's bills
+  var thisWeekBills=bills.filter(function(b){return getWeekKey(b.date)==='thisWeek';});
+  var thisWeekDates={};
+  thisWeekBills.forEach(function(b){thisWeekDates[normDate(b.date)]=true;});
+  
+  // Only count payments that match this week's bills
+  payments.forEach(function(p){
+    if(!status[p.en])return;
+    var cn=normDate(p.covers||p.date);
+    if(thisWeekDates[cn])status[p.en].totalPaid+=(p.amount||0);
+  });
 
-  bills.forEach(function(bill){
+  thisWeekBills.forEach(function(bill){
     var billItems=bill.items||[];if(!billItems.length)return;
     var bp=paymentsForBill(bill);
     var paidNames={};bp.forEach(function(p){paidNames[p.en]=true;});
-    var shortDate=bill.date.replace(' 2026','').replace(' 2025','');
+    var numItems=billItems.length;
+    var estPerPerson=numItems>0?Math.round((bill.total||0)/numItems):0;
+    var shortDate=displayDate(bill.date).replace(' 2026','').replace(' 2025','');
     billItems.forEach(function(item){
-      if(!status[item.en])status[item.en]={unpaidDates:[],paidDates:[],totalPaid:0};
-      if(paidNames[item.en])status[item.en].paidDates.push(shortDate);
-      else status[item.en].unpaidDates.push(shortDate);
+      if(!status[item.en])status[item.en]={unpaidDates:[],paidDates:[],totalPaid:0,totalOwed:0};
+      var itemAmt=item.price>0?item.price:estPerPerson;
+      if(paidNames[item.en]){
+        status[item.en].paidDates.push(shortDate);
+      }else{
+        status[item.en].unpaidDates.push(shortDate);
+        status[item.en].totalOwed+=itemAmt;
+      }
     });
   });
   return status;
+}
+
+
+function calcMemberStats(){
+  var stats={};
+  var thisWeekBills=bills.filter(function(b){return getWeekKey(b.date)==='thisWeek';});
+  var totalBillDays=thisWeekBills.length;
+  var balances=calcMemberBalances();
+
+  members.forEach(function(m){
+    var en=m.en;
+    var myPayments=payments.filter(function(p){return p.en===en;});
+    var bal=balances[en]||{unpaidDates:[],paidDates:[],totalPaid:0,totalOwed:0};
+
+    var daysEaten=0;
+    thisWeekBills.forEach(function(b){
+      var items=b.items||[];
+      if(items.some(function(it){return it.en===en;}))daysEaten++;
+    });
+
+    var prices=[];var dishCount={};
+    bills.forEach(function(b){
+      (b.items||[]).forEach(function(it){
+        if(it.en===en){
+          if(it.price>0)prices.push(it.price);
+          if(it.dish){var d=it.dish.toLowerCase().trim();if(d)dishCount[d]=(dishCount[d]||0)+1;}
+        }
+      });
+    });
+    var avgMeal=prices.length?Math.round(prices.reduce(function(s,p){return s+p;},0)/prices.length):0;
+
+    var favDish='',favCount=0;
+    Object.keys(dishCount).forEach(function(d){if(dishCount[d]>favCount){favCount=dishCount[d];favDish=d;}});
+
+    var speedScores=[];
+    thisWeekBills.forEach(function(b){
+      var items=b.items||[];
+      if(!items.some(function(it){return it.en===en;}))return;
+      var billNorm=normDate(b.date);
+      var matchPay=myPayments.find(function(p){return normDate(p.covers||p.date)===billNorm;});
+      if(matchPay){
+        var billD=new Date(billNorm+'T12:00:00');
+        var payD=matchPay.createdAt?(matchPay.createdAt.toDate?matchPay.createdAt.toDate():new Date(matchPay.createdAt)):billD;
+        var diffDays=Math.max(0,Math.round((payD-billD)/(1000*60*60*24)));
+        if(diffDays<=0)speedScores.push(5);
+        else if(diffDays<=1)speedScores.push(4);
+        else if(diffDays<=2)speedScores.push(3);
+        else if(diffDays<=3)speedScores.push(2);
+        else speedScores.push(1);
+      }
+    });
+    var avgSpeed=speedScores.length?Math.round(speedScores.reduce(function(s,v){return s+v;},0)/speedScores.length):0;
+
+    stats[en]={
+      totalPaid:bal.totalPaid,totalOwed:bal.totalOwed,
+      unpaidDates:bal.unpaidDates,
+      daysEaten:daysEaten,totalBillDays:totalBillDays,
+      avgMeal:avgMeal,avgSpeed:avgSpeed,
+      favDish:favDish,favCount:favCount,
+      payCount:myPayments.length
+    };
+  });
+  return stats;
 }
 
 function renderOverview(){
@@ -282,43 +382,63 @@ function renderOverview(){
   items.sort(function(a,b){return b.ts-a.ts});var recent=items.slice(0,5);
   var rh='';recent.forEach(function(it){var d=it.d;
     if(it.kind==='bill'){var dow=dayOfWeek(d.date);
-      rh+='<div class="flex items-center justify-between p-4 border-b border-outline-v/30 hover:bg-surface-low/50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-error-c/30 text-error flex items-center justify-center shrink-0"><span class="mi text-[20px]">restaurant</span></div><div><div class="text-sm font-semibold">'+esc(d.note||d.date)+'</div><div class="text-xs text-txt3">'+esc(d.date)+(dow?' &middot; '+dow:'')+'</div></div></div><div class="text-right"><span class="text-sm font-bold text-error">- '+fmt(d.total)+' &#273;</span></div></div>';
+      rh+='<div class="flex items-center justify-between p-4 border-b border-outline-v/30 hover:bg-surface-low/50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-error-c/30 text-error flex items-center justify-center shrink-0"><span class="mi text-[20px]">restaurant</span></div><div><div class="text-sm font-semibold">'+esc(d.note||d.date)+'</div><div class="text-xs text-txt3">'+displayDate(d.date)+(dow?' &middot; '+dow:'')+'</div></div></div><div class="text-right"><span class="text-sm font-bold text-error">- '+fmt(d.total)+' &#273;</span></div></div>';
     }else{var m=memberByEn(d.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';
-      rh+='<div class="flex items-center justify-between p-4 border-b border-outline-v/30 hover:bg-surface-low/50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style="background:'+bg+';color:'+fg+'">'+initials(d.en)+'</div><div><div class="text-sm font-semibold">'+esc(d.en)+' '+t('paid').toLowerCase()+'</div><div class="text-xs text-txt3">'+esc(d.covers||d.date)+'</div></div></div><div class="text-right"><span class="text-sm font-bold text-secondary">+ '+fmt(d.amount)+' &#273;</span></div></div>';}
+      rh+='<div class="flex items-center justify-between p-4 border-b border-outline-v/30 hover:bg-surface-low/50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style="background:'+bg+';color:'+fg+'">'+initials(d.en)+'</div><div><div class="text-sm font-semibold">'+esc(d.en)+' '+t('paid').toLowerCase()+'</div><div class="text-xs text-txt3">'+displayDate(d.covers||d.date)+'</div></div></div><div class="text-right"><span class="text-sm font-bold text-secondary">+ '+fmt(d.amount)+' &#273;</span></div></div>';}
   });
 
-  // Member balance section — track paid/unpaid days, no amount estimation
-  var balStatus=calcMemberBalances();
-  var sorted=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
-  var balHtml='';
-  sorted.forEach(function(m){
-    var s=balStatus[m.en]||{unpaidDates:[],paidDates:[],totalPaid:0};
+    // Member stats cards
+  var mStats=calcMemberStats();
+  var sortedM=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
+  var cardsHtml='';
+  sortedM.forEach(function(m){
+    var s=mStats[m.en]||{totalPaid:0,totalOwed:0,unpaidDates:[],daysEaten:0,totalBillDays:0,avgMeal:0,avgSpeed:0,favDish:'',favCount:0,payCount:0};
     var bg=m.bg||'#e6e8ea',fg=m.fg||'#424656';
-    var hasData=s.unpaidDates.length>0||s.paidDates.length>0;
-    var isSettled=hasData&&s.unpaidDates.length===0;
     var hasUnpaid=s.unpaidDates.length>0;
 
-    var badge,badgeBg,badgeColor;
-    if(!hasData){
-      badge='–';badgeBg='#f5f5f4';badgeColor='#a8a29e';
-    }else if(isSettled){
-      badge='<span class="mi text-[14px]">check_circle</span>'+t('clear');
-      badgeBg='#dcfce7';badgeColor='#065f46';
-    }else{
-      badge='<span class="mi text-[14px]">warning</span>'+s.unpaidDates.join(', ');
-      badgeBg='#fef2f2';badgeColor='#991b1b';
-    }
+    // Badges
+    var badges='';
+    if(s.avgSpeed>=5)badges+='<span style="background:#dcfce7;color:#166534;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">bolt</span>Speed</span>';
+    else if(s.avgSpeed>0&&s.avgSpeed<=2)badges+='<span style="background:#fef2f2;color:#991b1b;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">schedule</span>Slow</span>';
+    if(s.avgMeal>0&&s.avgMeal<=35000)badges+='<span style="background:#fef9c3;color:#854d0e;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">eco</span>Budget</span>';
+    else if(s.avgMeal>=45000)badges+='<span style="background:#fce7f3;color:#831843;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">local_fire_department</span>Big $</span>';
+    if(s.daysEaten>0&&s.daysEaten===s.totalBillDays)badges+='<span style="background:#e0e7ff;color:#3730a3;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:2px"><span class="mi" style="font-size:11px">event_available</span>100%</span>';
 
-    balHtml+='<div class="flex items-center gap-3 py-2.5 border-b border-outline-v/20 last:border-0">';
-    balHtml+='<div class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style="background:'+bg+';color:'+fg+'">'+initials(m.en)+'</div>';
-    balHtml+='<div class="flex-1 min-w-0"><div class="text-sm font-semibold">'+esc(m.en)+'<span class="text-xs text-txt3 font-normal ml-1">('+esc(m.vn)+')</span></div>';
-    if(s.totalPaid>0)balHtml+='<div class="text-xs text-txt3">'+t('totalPaidLabel')+': '+fmt(s.totalPaid)+'&#273;</div>';
-    balHtml+='</div>';
-    balHtml+='<div class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold whitespace-nowrap" style="background:'+badgeBg+';color:'+badgeColor+'">'+badge+'</div>';
-    balHtml+='</div>';
+    // Stars
+    var stars='';
+    for(var i=1;i<=5;i++)stars+=(i<=s.avgSpeed?'<span style="color:#d97706">\u2605</span>':'<span style="color:#e5e7eb">\u2605</span>');
+
+    cardsHtml+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-4 flex flex-col gap-3">';
+    // Header: avatar + name + badges + balance
+    cardsHtml+='<div style="display:flex;align-items:center;gap:10px"><div style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;background:'+bg+';color:'+fg+'">'+initials(m.en)+'</div>';
+    cardsHtml+='<div style="flex:1;min-width:0"><div class="text-sm font-bold">'+esc(m.vn||m.en)+' <span class="font-normal text-txt3">'+esc(m.en)+'</span></div>';
+    if(badges)cardsHtml+='<div style="display:flex;gap:4px;margin-top:2px;flex-wrap:wrap">'+badges+'</div>';
+    cardsHtml+='</div>';
+    // Balance badge
+    if(hasUnpaid){
+      cardsHtml+='<div style="text-align:right"><div class="text-[10px] text-txt3">Owes</div><div class="text-base font-bold" style="color:#dc2626">'+fmtK(s.totalOwed)+'</div></div>';
+    }else if(s.daysEaten>0){
+      cardsHtml+='<div style="text-align:right"><div class="text-[10px] text-txt3">Status</div><div class="text-sm font-bold" style="color:#059669"><span class="mi" style="font-size:14px">check_circle</span></div></div>';
+    }
+    cardsHtml+='</div>';
+
+    // Stats row
+    cardsHtml+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;border-top:1px solid #f0f0f0;padding-top:10px;text-align:center">';
+    cardsHtml+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Avg meal</div><div class="text-sm font-bold">'+(s.avgMeal>0?fmtK(s.avgMeal):'--')+'</div></div>';
+    cardsHtml+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Pay speed</div><div style="font-size:12px;letter-spacing:-1px">'+(s.avgSpeed>0?stars:'--')+'</div></div>';
+    cardsHtml+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Attendance</div><div class="text-sm font-bold">'+s.daysEaten+'/'+s.totalBillDays+'</div></div>';
+    cardsHtml+='</div>';
+
+    // Favorite dish or unpaid alert
+    if(hasUnpaid){
+      cardsHtml+='<div style="background:#fef2f2;border-radius:8px;padding:6px 10px;font-size:11px;color:#991b1b;font-weight:600"><span class="mi" style="font-size:12px">warning</span> '+s.unpaidDates.join(', ')+' ('+fmtK(s.totalOwed)+')</div>';
+    }else if(s.favDish){
+      cardsHtml+='<div style="font-size:11px;color:#737373"><span class="mi" style="font-size:12px;color:#dc2626">favorite</span> '+esc(s.favDish)+' ('+s.favCount+'x)</div>';
+    }
+    cardsHtml+='</div>';
   });
 
-  var balSection='<section class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-5 mt-4"><div class="flex items-center gap-2 mb-3"><span class="mi text-[18px] text-txt3">account_balance_wallet</span><h3 class="text-sm font-semibold">'+t('memberBalance')+'</h3></div>'+balHtml+'</section>';
+  var balSection='<section class="mt-4"><div class="flex items-center gap-2 mb-3"><span class="mi text-[18px] text-txt3">bar_chart</span><h3 class="text-sm font-semibold">'+t('memberBalance')+' — '+t('thisWeek')+'</h3></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'+cardsHtml+'</div></section>';
 
   return '<section class="grid grid-cols-2 lg:grid-cols-4 gap-3">'+
     '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-outline-v/20"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px]">receipt_long</span><span class="text-xs font-bold uppercase tracking-wider">'+t('totalBills')+'</span></div><div class="text-headline font-bold">'+fmt(totalB)+' <span class="text-sm font-normal text-txt3">&#273;</span></div></div>'+
@@ -474,9 +594,9 @@ function renderPayments(){
   html+='<div class="hidden md:grid grid-cols-12 gap-3 p-4 bg-surface-low border-b border-outline-v text-label font-bold text-txt3 uppercase tracking-wider"><div class="col-span-4">'+t('payer')+'</div><div class="col-span-3">'+t('amount')+'</div><div class="col-span-3">'+t('contentLabel')+'</div><div class="col-span-2 text-right">'+t('detail')+'</div></div>';
   filtered.forEach(function(p){var m=memberByEn(p.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';var dow=dayOfWeek(p.covers||p.date);
     html+='<div class="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 p-4 border-b border-outline-v/20 hover:bg-surface-low/50 transition-colors items-center cursor-pointer" data-ep2="'+p.id+'">';
-    html+='<div class="col-span-1 md:col-span-4 flex items-center gap-3">'+(p.photoData?'<img src="'+p.photoData+'" class="w-10 h-10 rounded-lg object-cover shrink-0" onclick="event.stopPropagation();showLightbox(this.src)"/>':'<div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style="background:'+bg+';color:'+fg+'">'+initials(p.en)+'</div>')+'<div><p class="text-sm font-semibold">'+esc(p.en)+'</p><p class="text-xs text-txt3 md:hidden">'+esc(p.covers||p.date)+'</p></div></div>';
+    html+='<div class="col-span-1 md:col-span-4 flex items-center gap-3">'+(p.photoData?'<img src="'+p.photoData+'" class="w-10 h-10 rounded-lg object-cover shrink-0" onclick="event.stopPropagation();showLightbox(this.src)"/>':'<div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style="background:'+bg+';color:'+fg+'">'+initials(p.en)+'</div>')+'<div><p class="text-sm font-semibold">'+esc(p.en)+'</p><p class="text-xs text-txt3 md:hidden">'+displayDate(p.covers||p.date)+'</p></div></div>';
     html+='<div class="col-span-1 md:col-span-3"><span class="text-title font-bold text-secondary">'+fmt(p.amount)+' &#273;</span></div>';
-    html+='<div class="col-span-1 md:col-span-3 hidden md:block"><p class="text-sm">'+esc(p.covers||p.date)+(dow?' &middot; '+dow:'')+'</p><p class="text-xs text-txt3">'+esc(p.method||'')+'</p></div>';
+    html+='<div class="col-span-1 md:col-span-3 hidden md:block"><p class="text-sm">'+displayDate(p.covers||p.date)+(dow?' &middot; '+dow:'')+'</p><p class="text-xs text-txt3">'+esc(p.method||'')+'</p></div>';
     html+='<div class="col-span-1 md:col-span-2 flex justify-end"><span class="inline-flex items-center gap-1 text-txt3 bg-surface-low px-2 py-1 rounded-full text-label"><span class="mi text-[14px]">'+(p.method==='Cash'?'payments':'account_balance')+'</span>'+(p.method==='Cash'?t('cash'):t('bankTransfer'))+'</span></div></div>';
   });
   html+='</div>';return html;
@@ -489,20 +609,15 @@ function clearPFilter(){pFilter={name:'',week:'',date:''};renderAll();}
 function renderPeople(){
   var sorted=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
   if(!sorted.length)return'<div class="text-center text-txt3 py-12">'+t('noData')+'</div>';
-  var maxPaid=0;sorted.forEach(function(m){var p=payments.filter(function(p){return p.en===m.en}).reduce(function(s,p){return s+(p.amount||0)},0);if(p>maxPaid)maxPaid=p;});
   var html='<div class="flex justify-end mb-3"><button onclick="openMemberModal()" class="flex items-center gap-1 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-c transition-colors"><span class="mi text-[18px]">person_add</span>'+t('addMember')+'</button></div>';
   html+='<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
   sorted.forEach(function(m){
-    var paid=payments.filter(function(p){return p.en===m.en}).reduce(function(s,p){return s+(p.amount||0)},0);
     var cnt=payments.filter(function(p){return p.en===m.en}).length;
-    var pct=maxPaid>0?Math.round(paid/maxPaid*100):0;
-    var isTop=paid===maxPaid&&paid>0;
-    var barColor=isTop?'bg-primary':pct>60?'bg-secondary':'bg-outline';
-    html+='<div class="bg-surface-white rounded-xl p-5 shadow-card border border-outline-v/20 relative overflow-hidden flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow" data-em="'+m.id+'">';
-    if(isTop)html+='<div class="absolute top-0 right-0 bg-tertiary-c text-white px-2 py-1 rounded-bl-lg text-label flex items-center gap-1"><span class="mi text-[12px]">star</span>'+t('topPayer')+'</div>';
-    html+='<div class="flex items-start gap-3"><div class="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold border-2 border-surface-white" style="background:'+(m.bg||'#e6e8ea')+';color:'+(m.fg||'#424656')+'">'+initials(m.en)+'</div><div><h3 class="text-title font-semibold">'+esc(m.vn||m.en)+'</h3><p class="text-body-sm text-txt3">'+esc(m.en)+'</p></div></div>';
-    html+='<div class="mt-4 pt-3 border-t border-outline-v/30"><div class="flex justify-between items-center mb-2"><span class="text-body-sm text-txt3">'+cnt+' '+t('paymentCount')+'</span><span class="text-title font-bold '+('')+'">'+fmt(paid)+' &#273;</span></div>';
-    html+='<div class="prog"><div class="prog-bar '+barColor+'" style="width:'+pct+'%"></div></div></div></div>';
+    html+='<div class="bg-surface-white rounded-xl p-5 shadow-card border border-outline-v/20 flex items-center gap-4 cursor-pointer hover:shadow-md transition-shadow" data-em="'+m.id+'">';
+    html+='<div class="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style="background:'+(m.bg||'#e6e8ea')+';color:'+(m.fg||'#424656')+'">'+initials(m.en)+'</div>';
+    html+='<div class="flex-1 min-w-0"><div class="text-sm font-bold">'+esc(m.vn||m.en)+'</div><div class="text-xs text-txt3">'+esc(m.en)+' &middot; '+cnt+' '+t('paymentCount')+'</div></div>';
+    html+='<span class="mi text-txt3 text-[18px]">edit</span>';
+    html+='</div>';
   });
   html+='</div>';return html;
 }
@@ -668,8 +783,19 @@ function closeQuickPayment(){document.getElementById('modal-host').innerHTML='';
 
 function submitQuickPayment(e,en,vn){
   e.preventDefault();var fd=new FormData(e.target);
-  var payload={en:en,vn:vn,amount:parseInt(fd.get('amount'))||0,covers:fromInputDate(fd.get('covers')),method:fd.get('method')||'Bank Transfer',date:today(),createdAt:new Date()};
+  var coversDate=fromInputDate(fd.get('covers'));
+  var coversNorm=normDate(coversDate);
   var btn=e.target.querySelector('button[type=submit]');if(btn)btn.disabled=true;
+  
+  // Check for existing payment (prevent duplicate)
+  var existing=payments.find(function(p){return p.en===en&&normDate(p.covers||p.date)===coversNorm;});
+  if(existing){
+    if(!confirm(en+' already paid '+fmt(existing.amount)+'d for '+displayDate(coversDate)+'. Add another payment?')){
+      if(btn)btn.disabled=false;return;
+    }
+  }
+  
+  var payload={en:en,vn:vn,amount:parseInt(fd.get('amount'))||0,covers:coversDate,method:fd.get('method')||'Bank Transfer',date:today(),createdAt:new Date()};
   db.collection('payments').add(payload)
     .then(function(){closeQuickPayment();})
     .catch(function(err){alert(err.message);if(btn)btn.disabled=false;});
