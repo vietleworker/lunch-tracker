@@ -473,12 +473,70 @@ function renderBills(){
     return diff!==0?diff:db.getTime()-da.getTime(); // same DOW → newer first
   });}
   Object.keys(groups).forEach(function(k){sortByDow(groups[k]);});
+
+  // Helper: get week date range
+  function getWeekRange(key){
+    var now=new Date();var s=new Date(now);s.setDate(now.getDate()-now.getDay()+1);s.setHours(0,0,0,0);// Monday
+    var e=new Date(s);e.setDate(s.getDate()+4);// Friday
+    if(key==='lastWeek'){s.setDate(s.getDate()-7);e.setDate(e.getDate()-7);}
+    else if(key==='earlier')return'';
+    var fmt2=function(d){return d.getDate()+' '+d.toLocaleString('en-US',{month:'short'});};
+    return fmt2(s)+' - '+fmt2(e);
+  }
+
+  // Helper: build weekly summary
+  function weekSummary(weekBills){
+    var totalBill=0,totalRec=0,allItems=[],pplSet={};
+    weekBills.forEach(function(b){
+      totalBill+=(b.total||0);
+      var bp=paymentsForBill(b);totalRec+=bp.reduce(function(s,p){return s+(p.amount||0);},0);
+      (b.items||[]).forEach(function(it){
+        allItems.push(it);pplSet[it.en]=true;
+      });
+    });
+    var pplCount=Object.keys(pplSet).length;
+    // Most expensive eater
+    var maxItem=null,minItem=null;
+    allItems.forEach(function(it){
+      if(it.price>0){
+        if(!maxItem||it.price>maxItem.price)maxItem=it;
+        if(!minItem||it.price<minItem.price)minItem=it;
+      }
+    });
+    // Most popular dish
+    var dishCnt={};allItems.forEach(function(it){if(it.dish){var d=it.dish.trim();if(d)dishCnt[d]=(dishCnt[d]||0)+1;}});
+    var topDish='',topDishCnt=0;Object.keys(dishCnt).forEach(function(d){if(dishCnt[d]>topDishCnt){topDishCnt=dishCnt[d];topDish=d;}});
+
+    var h='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-4 mb-4">';
+    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;text-align:center">';
+    h+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Total bills</div><div class="text-lg font-bold">'+fmt(totalBill)+'<span class="text-xs text-txt3">&#273;</span></div></div>';
+    h+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Collected</div><div class="text-lg font-bold" style="color:#059669">'+fmt(totalRec)+'<span class="text-xs text-txt3">&#273;</span></div></div>';
+    h+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Outstanding</div><div class="text-lg font-bold" style="color:#dc2626">'+fmt(totalBill-totalRec)+'<span class="text-xs text-txt3">&#273;</span></div></div>';
+    h+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">People</div><div class="text-lg font-bold">'+pplCount+'</div></div>';
+    h+='</div>';
+    // Fun stats row
+    var funStats=[];
+    if(maxItem)funStats.push('<span class="mi" style="font-size:13px;color:#dc2626">local_fire_department</span> <b>'+esc(maxItem.en)+'</b> ate priciest ('+fmtK(maxItem.price)+')');
+    if(minItem&&minItem.en!==( maxItem?maxItem.en:''))funStats.push('<span class="mi" style="font-size:13px;color:#059669">eco</span> <b>'+esc(minItem.en)+'</b> ate cheapest ('+fmtK(minItem.price)+')');
+    if(topDish)funStats.push('<span class="mi" style="font-size:13px;color:#d97706">restaurant</span> Popular: <b>'+esc(topDish)+'</b> ('+topDishCnt+'x)');
+    if(funStats.length){
+      h+='<div style="border-top:1px solid #f0f0f0;margin-top:10px;padding-top:8px;display:flex;flex-wrap:wrap;gap:8px 16px;font-size:11px;color:#737373">';
+      funStats.forEach(function(s){h+='<div>'+s+'</div>';});
+      h+='</div>';
+    }
+    h+='</div>';
+    return h;
+  }
+
   var html='<div class="space-y-6">';
   [{key:'thisWeek',label:t('thisWeek')},{key:'lastWeek',label:t('lastWeek')},{key:'earlier',label:t('earlier')}].forEach(function(g){
     if(!groups[g.key].length)return;
     var open=weekState[g.key]!==false;
-    html+='<section><button onclick="toggleWeek(\''+g.key+'\')" class="flex items-center gap-2 w-full text-left mb-3 p-2 rounded-lg hover:bg-surface-low transition-colors group"><span class="mi text-txt3 group-hover:text-primary transition-colors">'+(open?'expand_more':'chevron_right')+'</span><h2 class="text-title font-bold uppercase tracking-wide">'+g.label+'</h2></button>';
-    if(open){html+='<div class="space-y-4">';
+    var range=getWeekRange(g.key);
+    html+='<section><button onclick="toggleWeek(\''+g.key+'\')" class="flex items-center gap-2 w-full text-left mb-3 p-2 rounded-lg hover:bg-surface-low transition-colors group"><span class="mi text-txt3 group-hover:text-primary transition-colors">'+(open?'expand_more':'chevron_right')+'</span><h2 class="text-title font-bold uppercase tracking-wide">'+g.label+(range?' <span class="text-body-sm text-txt3 font-normal normal-case">('+range+')</span>':'')+'</h2></button>';
+    if(open){
+      html+=weekSummary(groups[g.key]);
+      html+='<div class="space-y-4">';
       groups[g.key].forEach(function(bill){
         var bp=paymentsForBill(bill);var received=bp.reduce(function(s,p){return s+(p.amount||0)},0);
         var total=bill.total||0;var pct=total>0?Math.min(100,Math.round(received/total*100)):0;
@@ -487,7 +545,7 @@ function renderBills(){
         var notPaid=members.filter(function(m){return!paidNames[m.en]}).map(function(m){return m.en});
         var isPaid=pct>=100;var progColor=pct<30?'bg-error':pct<70?'bg-tertiary-c':'bg-secondary';
         html+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 overflow-hidden">';
-        html+='<div class="p-5 border-b border-outline-v/30"><div class="flex justify-between items-start gap-4 cursor-pointer" data-eb="'+bill.id+'"><div><div class="flex items-center gap-2 mb-1"><span class="text-label font-bold text-txt3 bg-surface-low px-2 py-1 rounded uppercase">'+(dow||'')+'</span><span class="text-body-sm text-txt3">'+esc(bill.date)+'</span></div><div class="text-headline text-primary font-semibold">'+esc(bill.note||'--')+'</div></div><div class="text-right"><div class="text-2xl font-bold tabular-nums">'+fmt(total)+'<span class="text-title ml-1">&#273;</span></div>';
+        html+='<div class="p-5 border-b border-outline-v/30"><div class="flex justify-between items-start gap-4 cursor-pointer" data-eb="'+bill.id+'"><div><div class="flex items-center gap-2 mb-1"><span class="text-label font-bold text-txt3 bg-surface-low px-2 py-1 rounded uppercase">'+(dow||'')+'</span><span class="text-body-sm text-txt3">'+displayDate(bill.date)+'</span></div><div class="text-headline text-primary font-semibold">'+esc(bill.note||'--')+'</div></div><div class="text-right"><div class="text-2xl font-bold tabular-nums">'+fmt(total)+'<span class="text-title ml-1">&#273;</span></div>';
         html+='<div class="mt-1"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label '+(isPaid?'bg-secondary-c/20 text-secondary-on':'bg-tertiary-bg text-tertiary')+'""><span class="mi text-[14px]">'+(isPaid?'check_circle':'sync')+'</span>'+(isPaid?t('fullyPaid'):t('collecting'))+'</span></div>';
         html+='</div></div></div>';
         if(bill.photoData)html+='<img src="'+bill.photoData+'" class="w-full max-h-48 object-cover cursor-pointer" onclick="showLightbox(this.src)"/>';
