@@ -359,11 +359,13 @@ export default {
     // ═══ SePay Webhook — auto-create payments from bank transfers ═══
     if (url2.pathname === "/webhook/sepay") {
       try {
-        // Verify SePay authorization
+        // Optional auth — only verify if Authorization header is present
         const authHeader = request.headers.get("Authorization") || "";
-        const sepayKey = authHeader.replace("Apikey ", "").replace("Bearer ", "").trim();
-        if (sepayKey !== SEPAY_TOKEN) {
-          return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: H });
+        if (authHeader) {
+          const sepayKey = authHeader.replace("Apikey ", "").replace("Bearer ", "").trim();
+          if (sepayKey !== SEPAY_TOKEN) {
+            return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: H });
+          }
         }
 
         const body = await request.json();
