@@ -112,7 +112,7 @@ var isAdmin=localStorage.getItem('lt-auth')==='1';
 function sha256(str){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)).then(function(b){return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');});}
 function logout(){isAdmin=false;localStorage.removeItem('lt-auth');renderAll();}
 
-var L={en:{overview:'Overview',bills:'Bills',payments:'Payments',people:'Members',shops:'Shops',shopName:'Shop name',addShop:'Add Shop',editShop:'Edit Shop',menuItems:'Menu',addDish:'Add dish',selectShop:'Select shop',selectDish:'Select dish',noShop:'Manual input',shopSaved:'Shop saved',shopDeleted:'Shop deleted',saveShop:'Save shop',addTx:'Add Transaction',
+var L={en:{overview:'Overview',bills:'Bills',payments:'Payments',people:'Members',shops:'Shops',shopName:'Shop name',addShop:'Add Shop',editShop:'Edit Shop',menuItems:'Menu',addDish:'Add dish',selectShop:'Select shop',selectDish:'Select dish',noShop:'Manual input',shopSaved:'Shop saved',shopDeleted:'Shop deleted',unmatchedPayments:'Unmatched payments',assignToBill:'Assign to bill',noBill:'No bill',saveShop:'Save shop',addTx:'Add Transaction',
 totalBills:'Total bills',totalPaid:'Total paid',outstanding:'Outstanding',count:'Count',
 topContrib:'Top contributor',recentActivity:'Recent activity',
 notYetPaid:'Not yet paid',collected:'collected',received:'Received',billTotal:'Bill total',
@@ -141,7 +141,7 @@ avatarColor:'Avatar color',saveMember:'Save member',deleteMember:'Delete member'
     guideAcct:'Account number',guideScanQR:'Scan QR to pay',guideHowTo:'How it works',guideStep1:'Transfer money to the account above',guideStep2:'In the transfer content write your name + day info',guideStep3:'The system auto-detects and records your payment',guideScTitle1:'Scenario 1: Pay for today',guideScDesc1:'You ate lunch today and want to pay right away.',guideScTransfer1:'Transfer: any amount',guideScWrite1:'Write in content:',guideScResult1:'System creates 1 payment for today with full transfer amount.',guideScTitle2:'Scenario 2: Pay for a specific day',guideScDesc2:'You ate lunch on the 12th and bill was 40k. You transfer 40000d.',guideScTransfer2:'Transfer: 40000d',guideScWrite2:'Write in content:',guideScResult2:'System creates 1 payment: 40000d for day 12.',guideScNote2:'Number 40 = 40000d (in thousands). Number 12 = day 12 of this month.',guideScTitle3:'Scenario 3: Pay for 2 days split evenly',guideScDesc3:'You ate on the 11th and 12th. Total 90k. Transfer 90000d.',guideScTransfer3:'Transfer: 90000d',guideScWrite3:'Write in content:',guideScResult3:'System creates 2 payments: 45000d day 11 + 45000d day 12 (split evenly).',guideScNote3:'Only day numbers (1-31) and no amounts. System splits total evenly.',guideScTitle4:'Scenario 4: Pay 2 days with different amounts',guideScDesc4:'Day 11 bill was 50k and day 12 was 40k. Transfer 90000d.',guideScTransfer4:'Transfer: 90000d',guideScWrite4:'Write in content:',guideScResult4:'System creates 2 payments: 50000d day 11 + 40000d day 12.',guideScNote4:'Format: amount day amount day. Numbers > 31 = amount (thousands) and 1-31 = day.',guideScTitle5:'Scenario 5: Pay for the whole week',guideScDesc5:'You ate Mon-Fri (days 11-15). Total 200k. Transfer 200000d.',guideScTransfer5:'Transfer: 200000d',guideScWrite5:'Write in content:',guideScResult5:'System creates 5 payments of 40000d each (200k split across 5 days).',guideFormatTitle:'Transfer content format',guideFormatName:'Your name (English or Vietnamese)',guideFormatNoDay:'No day = payment covers today',guideFormatNoAmt:'No amount = total split evenly across days',
     guideNames:'Name list',guideWarn:'Write your name correctly so the system can auto-detect. Wrong name = not recorded automatically.',
     guideContent:'Transfer content',login:'Login to edit',logout:'Logout',readOnly:'View only — login to edit',loginTitle:'Admin Login',loginHint:'Enter password to enable editing',wrongPass:'Wrong password',loginBtn:'Login',settingsTitle:'Settings',changePass:'Change password',newPass:'New password',confirmPass:'Confirm new password',passMismatch:'Passwords do not match',passChanged:'Password changed!',savePass:'Save password'},
-vi:{overview:'T\u1ed5ng quan',bills:'H\u00f3a \u0111\u01a1n',payments:'Thanh to\u00e1n',people:'Th\u00e0nh vi\u00ean',shops:'C\u1eeda h\u00e0ng',shopName:'T\u00ean c\u1eeda h\u00e0ng',addShop:'Th\u00eam c\u1eeda h\u00e0ng',editShop:'S\u1eeda c\u1eeda h\u00e0ng',menuItems:'Th\u1ef1c \u0111\u01a1n',addDish:'Th\u00eam m\u00f3n',selectShop:'Ch\u1ecdn c\u1eeda h\u00e0ng',selectDish:'Ch\u1ecdn m\u00f3n',noShop:'Nh\u1eadp tay',shopSaved:'\u0110\u00e3 l\u01b0u',shopDeleted:'\u0110\u00e3 x\u00f3a',saveShop:'L\u01b0u',addTx:'Th\u00eam Giao D\u1ecbch',
+vi:{overview:'T\u1ed5ng quan',bills:'H\u00f3a \u0111\u01a1n',payments:'Thanh to\u00e1n',people:'Th\u00e0nh vi\u00ean',shops:'C\u1eeda h\u00e0ng',shopName:'T\u00ean c\u1eeda h\u00e0ng',addShop:'Th\u00eam c\u1eeda h\u00e0ng',editShop:'S\u1eeda c\u1eeda h\u00e0ng',menuItems:'Th\u1ef1c \u0111\u01a1n',addDish:'Th\u00eam m\u00f3n',selectShop:'Ch\u1ecdn c\u1eeda h\u00e0ng',selectDish:'Ch\u1ecdn m\u00f3n',noShop:'Nh\u1eadp tay',shopSaved:'\u0110\u00e3 l\u01b0u',shopDeleted:'\u0110\u00e3 x\u00f3a',unmatchedPayments:'Kh\u00f4ng kh\u1edbp bill',assignToBill:'G\u00e1n v\u00e0o bill',noBill:'Ch\u01b0a c\u00f3 bill',saveShop:'L\u01b0u',addTx:'Th\u00eam Giao D\u1ecbch',
 totalBills:'T\u1ed5ng h\u00f3a \u0111\u01a1n',totalPaid:'\u0110\u00e3 \u0111\u00f3ng',outstanding:'C\u00f2n thi\u1ebfu',count:'S\u1ed1 l\u01b0\u1ee3ng',
 topContrib:'Ng\u01b0\u1eddi \u0111\u00f3ng g\u00f3p nhi\u1ec1u nh\u1ea5t',recentActivity:'Ho\u1ea1t \u0111\u1ed9ng g\u1ea7n \u0111\u00e2y',
 notYetPaid:'Ch\u01b0a thanh to\u00e1n',collected:'\u0111\u00e3 thu',received:'\u0110\u00e3 nh\u1eadn',billTotal:'T\u1ed5ng H\u0110',
@@ -379,6 +379,10 @@ function calcMemberStats(){
   return stats;
 }
 
+function getUnmatchedPayments(){
+  var billDates={};bills.forEach(function(b){billDates[normDate(b.date)]=true;});
+  return payments.filter(function(p){return!billDates[normDate(p.covers||p.date)];});
+}
 function renderOverview(){
   var totalB=bills.reduce(function(s,b){return s+(b.total||0)},0);
   var totalP=payments.reduce(function(s,p){return s+(p.amount||0)},0);
@@ -395,6 +399,17 @@ function renderOverview(){
     }else{var m=memberByEn(d.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';
       rh+='<div class="flex items-center justify-between p-4 border-b border-outline-v/30 hover:bg-surface-low/50 transition-colors"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-xs font-bold" style="background:'+bg+';color:'+fg+'">'+initials(d.en)+'</div><div><div class="text-sm font-semibold">'+esc(d.en)+' '+t('paid').toLowerCase()+'</div><div class="text-xs text-txt3">'+displayDate(d.covers||d.date)+'</div></div></div><div class="text-right"><span class="text-sm font-bold text-secondary">+ '+fmt(d.amount)+' &#273;</span></div></div>';}
   });
+
+    // Unmatched payments warning
+  var unmatched=getUnmatchedPayments();
+  if(unmatched.length){
+    rh+='<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:12px 16px;margin-top:12px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="mi text-error text-[18px]">warning</span><span class="text-sm font-bold text-error">'+unmatched.length+' unmatched payment'+(unmatched.length>1?'s':'')+'</span></div>';
+    unmatched.forEach(function(p){
+      var m=memberByEn(p.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';
+      rh+='<div class="flex justify-between items-center text-sm py-1.5 px-2 rounded-lg cursor-pointer hover:bg-error-c/20 transition-colors" data-ep="'+p.id+'"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold" style="background:'+bg+';color:'+fg+'">'+initials(p.en)+'</div><span>'+esc(p.en)+'</span><span class="text-xs text-txt3">'+displayDate(p.covers||p.date)+'</span></div><div class="flex items-center gap-2"><span class="font-semibold text-error">'+fmtK(p.amount)+'</span><span class="mi text-error text-[14px]">edit</span></div></div>';
+    });
+    rh+='<div class="text-[10px] text-error/70 mt-2">Click to edit and assign to correct bill date</div></div>';
+  }
 
     // Member stats cards
   var mStats=calcMemberStats();
@@ -692,11 +707,12 @@ function renderPayments(){
 
   html+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 overflow-hidden">';
   html+='<div class="hidden md:grid grid-cols-12 gap-3 p-4 bg-surface-low border-b border-outline-v text-label font-bold text-txt3 uppercase tracking-wider"><div class="col-span-4">'+t('payer')+'</div><div class="col-span-3">'+t('amount')+'</div><div class="col-span-3">'+t('contentLabel')+'</div><div class="col-span-2 text-right">'+t('detail')+'</div></div>';
-  filtered.forEach(function(p){var m=memberByEn(p.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';var dow=dayOfWeek(p.covers||p.date);
+  var billDatesSet={};bills.forEach(function(b){billDatesSet[normDate(b.date)]=true;});
+  filtered.forEach(function(p){var isUnmatched=!billDatesSet[normDate(p.covers||p.date)];var m=memberByEn(p.en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';var dow=dayOfWeek(p.covers||p.date);var unmatchBadge=isUnmatched?'<span style="background:#fef2f2;color:#dc2626;font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;margin-left:4px">No bill</span>':'';
     html+='<div class="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 p-4 border-b border-outline-v/20 hover:bg-surface-low/50 transition-colors items-center cursor-pointer" data-ep2="'+p.id+'">';
     html+='<div class="col-span-1 md:col-span-4 flex items-center gap-3">'+(p.photoData?'<img src="'+p.photoData+'" class="w-10 h-10 rounded-lg object-cover shrink-0" onclick="event.stopPropagation();showLightbox(this.src)"/>':'<div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style="background:'+bg+';color:'+fg+'">'+initials(p.en)+'</div>')+'<div><p class="text-sm font-semibold">'+esc(p.en)+'</p><p class="text-xs text-txt3 md:hidden">'+displayDate(p.covers||p.date)+'</p></div></div>';
     html+='<div class="col-span-1 md:col-span-3"><span class="text-title font-bold text-secondary">'+fmt(p.amount)+' &#273;</span></div>';
-    html+='<div class="col-span-1 md:col-span-3 hidden md:block"><p class="text-sm">'+displayDate(p.covers||p.date)+(dow?' &middot; '+dow:'')+'</p><p class="text-xs text-txt3">'+esc(p.method||'')+'</p></div>';
+    html+='<div class="col-span-1 md:col-span-3 hidden md:block"><p class="text-sm">'+displayDate(p.covers||p.date)+(dow?' &middot; '+dow:'')+unmatchBadge+'</p><p class="text-xs text-txt3">'+esc(p.method||'')+'</p></div>';
     html+='<div class="col-span-1 md:col-span-2 flex justify-end"><span class="inline-flex items-center gap-1 text-txt3 bg-surface-low px-2 py-1 rounded-full text-label"><span class="mi text-[14px]">'+(p.method==='Cash'?'payments':'account_balance')+'</span>'+(p.method==='Cash'?t('cash'):t('bankTransfer'))+'</span></div></div>';
   });
   html+='</div>';return html;
@@ -1092,7 +1108,7 @@ function renderModal(){
   }else{
     form='<div class="space-y-4"><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('person')+'</label><select name="member" required class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"><option value="">'+t('select')+'</option>'+memberOpts+'</select></div>'+
     '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('amount')+'</label><div class="relative flex items-center bg-surface-low rounded-xl px-4 py-2 focus-within:ring-1 focus-within:ring-primary"><input name="amount" type="number" inputmode="numeric" value="'+(d.amount||'')+'" placeholder="0" class="w-full bg-transparent border-none p-0 focus:ring-0 text-headline font-bold text-right outline-none" required/><span class="text-headline text-txt3 ml-2">&#273;</span></div></div>'+
-    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('coversDate')+'</label><input name="covers" type="date" value="'+toInputDate(d.covers||today())+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('coversDate')+'</label><input name="covers" type="date" id="coversDate" value="'+toInputDate(d.covers||today())+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/><div id="billAssignBox"></div></div>'+
     '<div class="grid grid-cols-2 gap-3"><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('method')+'</label><div class="flex gap-2"><label class="flex-1 cursor-pointer"><input type="radio" name="method" value="Bank Transfer" class="peer sr-only"'+(d.method!=='Cash'?' checked':'')+'/><div class="text-center py-2 rounded-lg border border-outline-v text-sm peer-checked:bg-primary-c peer-checked:text-white peer-checked:border-primary transition-all flex items-center justify-center gap-1"><span class="mi text-[18px]">account_balance</span>'+t('bankTransfer')+'</div></label><label class="flex-1 cursor-pointer"><input type="radio" name="method" value="Cash" class="peer sr-only"'+(d.method==='Cash'?' checked':'')+'/><div class="text-center py-2 rounded-lg border border-outline-v text-sm peer-checked:bg-primary-c peer-checked:text-white peer-checked:border-primary transition-all flex items-center justify-center gap-1"><span class="mi text-[18px]">payments</span>'+t('cash')+'</div></label></div></div>'+
     '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('date')+'</label><input name="date" type="date" value="'+toInputDate(d.date||today())+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/></div></div>'+
     '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('photo')+'</label>'+photoHtml+'</div></div>';
@@ -1134,6 +1150,17 @@ function renderModal(){
     if(!confirm(t('delete')+'?'))return;
     db.collection(modal.type==='bill'?'bills':'payments').doc(modal.data.id).delete().then(closeModal).catch(function(err){alert(err.message);});};}
   document.getElementById('f').onsubmit=handleSubmit;
+  // Bill assign dropdown for payments
+  var bab=document.getElementById('billAssignBox');
+  if(bab&&bills.length){
+    var sortedBills=bills.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+    var opts='<option value="">-- Assign to bill --</option>';
+    sortedBills.forEach(function(b){
+      var sel=(modal.data&&normDate(modal.data.covers)===normDate(b.date))?' selected':'';
+      opts+='<option value="'+toInputDate(b.date)+'"'+sel+'>'+displayDate(b.date)+' - '+(b.note||'').substring(0,30)+'</option>';
+    });
+    bab.innerHTML='<select onchange="if(this.value)document.getElementById(\'coversDate\').value=this.value" class="w-full bg-surface-low border border-outline-v/50 rounded-lg px-3 py-1.5 text-xs mt-1.5" style="color:#525252">'+opts+'</select><div class="text-[10px] text-txt3 mt-0.5">Select a bill to quickly assign this payment</div>';
+  }
 }
 
 
