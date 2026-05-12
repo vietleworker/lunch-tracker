@@ -439,12 +439,6 @@ export default {
           return new Response(JSON.stringify({ success: true, matched: false, content: body.content }), { headers: H });
         }
 
-        // Check duplicate by SePay txId
-        const dupCheck = await fetch(
-          `${FSURL}/payments?pageSize=1`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
         // ═══ DEDUPLICATION: check if sepayId already processed ═══
         const dupQuery = await fetch(
           `${FSURL}/payments:runQuery`,
