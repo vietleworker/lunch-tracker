@@ -775,7 +775,26 @@ function renderPeople(){
     html+='<span class="mi text-txt3 text-[18px]">edit</span>';
     html+='</div>';
   });
-  html+='</div>';return html;
+  html+='</div>';
+
+  // Shop Management
+  html+='<section class="mt-6"><div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-primary" style="text-transform:uppercase;letter-spacing:.5px">'+t('shops')+' ('+shops.length+')</h3>';
+  if(isAdmin)html+='<button onclick="openShopModal()" class="text-xs bg-primary-c text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1"><span class="mi text-[14px]">add</span>'+t('addShop')+'</button>';
+  html+='</div>';
+  if(!shops.length)html+='<div class="text-sm text-txt3 text-center py-4">No shops yet</div>';
+  shops.forEach(function(s){
+    html+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-4 mb-2'+(isAdmin?' cursor-pointer':'')+'"'+(isAdmin?' onclick="openShopModal(\''+s.id+'\')"':'')+'>';
+    html+='<div class="flex justify-between items-center"><div class="font-semibold text-sm">'+esc(s.name)+'</div><span class="text-xs text-txt3">'+(s.items?s.items.length:0)+' items</span></div>';
+    if(s.items&&s.items.length){
+      html+='<div class="mt-2 flex flex-wrap gap-1">';
+      s.items.forEach(function(it){html+='<span class="text-[10px] bg-surface-low px-2 py-0.5 rounded-full text-txt2">'+esc(it.dish)+' '+fmtK(it.price)+'</span>';});
+      html+='</div>';
+    }
+    html+='</div>';
+  });
+  html+='</section>';
+
+  return html;
 }
 
 function renderAll(){renderNav();
