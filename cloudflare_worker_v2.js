@@ -455,13 +455,28 @@ export default {
 
         // Smart content parsing
         // Format: "name [amount day] [amount day] ..."
-        // Examples: "parker" → 1 payment today
-        //           "parker 50 11 40 12" → 50k day 11, 40k day 12
-        //           "parker 11 12" → split evenly day 11 & 12
         const todayDay = txD.getDate();
 
-        // Extract all numbers from content (after removing member name)
-        const cleanContent = content.replace(matched.en.toLowerCase(), "").replace(matched.vn.toLowerCase(), "").replace(/k/gi, "").trim();
+        // Clean content: strip out bank metadata BEFORE extracting numbers
+        let cleanContent = content + " " + desc;
+        // Remove member names
+        cleanContent = cleanContent.replace(new RegExp(matched.en.toLowerCase(), "gi"), " ");
+        if (matched.vn) cleanContent = cleanContent.replace(new RegExp(matched.vn.toLowerCase(), "gi"), " ");
+        // Remove bank reference codes and account numbers (6+ digit numbers are junk)
+        cleanContent = cleanContent.replace(/FT\d+/gi, " ");
+        cleanContent = cleanContent.replace(/MBVCB[\.\d]+/gi, " ");
+        cleanContent = cleanContent.replace(/[A-Z0-9]{8,}/gi, " ");
+        cleanContent = cleanContent.replace(/\d{5,}/g, " "); // 5+ digit numbers = junk
+        // Remove "CT tu ... toi ... tai BANK" pattern
+        cleanContent = cleanContent.replace(/ct\s+tu[\s\S]*?(toi|$)/gi, " ");
+        cleanContent = cleanContent.replace(/toi\s+[\s\S]*?(tai|$)/gi, " ");
+        cleanContent = cleanContent.replace(/tai\s+\w*bank/gi, " ");
+        // Remove common Vietnamese bank transfer keywords
+        cleanContent = cleanContent.replace(/\b(chuyen|tien|tu|toi|tai|cho|tra|pay|nguyen|thi|anh|van|le|tran|pham|hoang|ngo|dang|bui|do|truong|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, " ");
+        // Handle "40k" suffix
+        cleanContent = cleanContent.replace(/(\d+)\s*k\b/gi, "$1");
+        cleanContent = cleanContent.trim();
+
         const nums = cleanContent.match(/\d+/g);
 
         let coversDates = [];
@@ -482,9 +497,10 @@ export default {
           const hasLargeNums = allNums.some(n => n > 31);
 
           if (hasLargeNums) {
-            // Parse as [amount, day] pairs
+            // Parse as [amount, day] pairs - cap amounts to reasonable lunch range
+            const MAX_LUNCH_K = 500; // 500k = max per-day lunch
             for (let i = 0; i < allNums.length; i++) {
-              if (allNums[i] > 31) {
+              if (allNums[i] > 31 && allNums[i] <= MAX_LUNCH_K) {
                 amounts.push(allNums[i] * 1000); // convert to VND
                 if (i + 1 < allNums.length && allNums[i + 1] >= 1 && allNums[i + 1] <= 31) {
                   days.push(allNums[i + 1]);
@@ -523,6 +539,21 @@ export default {
               coversDates = [{ day: todayDay, amt: amount }];
             }
           }
+        }
+
+        // Sanity check: parsed total must be within 10x of actual transfer
+        const parsedTotal = coversDates.reduce((s, c) => s + (c.amt || 0), 0);
+        if (parsedTotal > amount * 10 || parsedTotal === 0) {
+          // Way off — fallback to "covers today with full amount"
+          coversDates = [{ day: todayDay, amt: amount }];
+        }
+        // If parsed total is way less than actual amount and only days specified, split evenly
+        if (parsedTotal < amount * 0.5 && coversDates.length > 1 && coversDates.every(c => c.amt < 1000)) {
+          const perDay = Math.round(amount / coversDates.length);
+          coversDates = coversDates.map((c, i) => ({
+            day: c.day,
+            amt: (i === coversDates.length - 1) ? amount - perDay * (coversDates.length - 1) : perDay
+          }));
         }
 
         // Create payments
