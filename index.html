@@ -252,7 +252,7 @@ function compressImage(file,maxW,quality){
 
 function showLightbox(src){document.getElementById('lightbox-host').innerHTML='<div class="fixed inset-0 bg-black/92 z-[200] flex items-center justify-center p-5" onclick="this.parentNode.innerHTML=\'\'"><button onclick="event.stopPropagation();this.parentNode.parentNode.innerHTML=\'\'" class="absolute top-4 right-4 bg-white/10 text-white w-10 h-10 rounded-full flex items-center justify-center backdrop-blur text-lg">&times;</button><img src="'+src+'" class="max-w-full max-h-full object-contain rounded"/></div>';}
 
-var TABS=[{id:'overview',icon:'dashboard'},{id:'bills',icon:'receipt_long'},{id:'payments',icon:'payments'},{id:'guide',icon:'account_balance'},{id:'people',icon:'group'}];
+var TABS=[{id:'overview',icon:'dashboard'},{id:'bills',icon:'receipt_long'},{id:'payments',icon:'payments'},{id:'guide',icon:'account_balance'},{id:'shops',icon:'storefront'},{id:'people',icon:'group'}];
 
 function renderNav(){
   var sb='',mn='';
@@ -265,7 +265,7 @@ function renderNav(){
   document.getElementById('sb-title').textContent=t('group');
   document.getElementById('sb-sub').textContent=t('nMembers');
   document.getElementById('sb-add-label').textContent=t('addTx');
-  document.getElementById('page-title').textContent=t(tab==='people'?'people':tab);
+  document.getElementById('page-title').textContent=t(tab==='people'?'people':tab==='shops'?'shops':tab);
   document.getElementById('m-lang').textContent=lang.toUpperCase();
   var ab=document.getElementById('auth-btn');var ai=document.getElementById('auth-icon');var al=document.getElementById('auth-label');
   if(ab)ab.className='mt-2 w-full flex items-center gap-2 text-xs font-bold px-2 py-2.5 rounded-lg transition-colors '+(isAdmin?'bg-surface-high text-txt2':'text-primary hover:bg-primary-bg');
@@ -777,23 +777,29 @@ function renderPeople(){
   });
   html+='</div>';
 
-  // Shop Management
-  html+='<section class="mt-6"><div class="flex items-center justify-between mb-3"><h3 class="text-sm font-bold text-primary" style="text-transform:uppercase;letter-spacing:.5px">'+t('shops')+' ('+shops.length+')</h3>';
-  if(isAdmin)html+='<button onclick="openShopModal()" class="text-xs bg-primary-c text-white px-3 py-1.5 rounded-lg font-bold flex items-center gap-1"><span class="mi text-[14px]">add</span>'+t('addShop')+'</button>';
+  return html;
+}
+
+
+function renderShops(){
+  var html='<div class="flex justify-end mb-3">';
+  if(isAdmin)html+='<button onclick="openShopModal()" class="flex items-center gap-1 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-c transition-colors"><span class="mi text-[18px]">add_business</span>'+t('addShop')+'</button>';
   html+='</div>';
-  if(!shops.length)html+='<div class="text-sm text-txt3 text-center py-4">No shops yet</div>';
+  if(!shops.length)html+='<div class="text-center text-txt3 py-12">No shops yet. Add a shop to get started!</div>';
+  html+='<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">';
   shops.forEach(function(s){
-    html+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-4 mb-2'+(isAdmin?' cursor-pointer':'')+'"'+(isAdmin?' onclick="openShopModal(\''+s.id+'\')"':'')+'>';
-    html+='<div class="flex justify-between items-center"><div class="font-semibold text-sm">'+esc(s.name)+'</div><span class="text-xs text-txt3">'+(s.items?s.items.length:0)+' items</span></div>';
+    html+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 overflow-hidden'+(isAdmin?' cursor-pointer hover:shadow-md transition-shadow':'')+'"'+(isAdmin?' onclick="openShopModal(\''+s.id+'\')"':'')+'>';
+    html+='<div class="p-4 border-b border-outline-v/20"><div class="flex justify-between items-center"><div class="flex items-center gap-2"><span class="mi text-primary text-[20px]">storefront</span><span class="font-bold text-sm">'+esc(s.name)+'</span></div><span class="text-xs text-txt3 bg-surface-low px-2 py-0.5 rounded-full">'+(s.items?s.items.length:0)+' '+t('menuItems')+'</span></div></div>';
     if(s.items&&s.items.length){
-      html+='<div class="mt-2 flex flex-wrap gap-1">';
-      s.items.forEach(function(it){html+='<span class="text-[10px] bg-surface-low px-2 py-0.5 rounded-full text-txt2">'+esc(it.dish)+' '+fmtK(it.price)+'</span>';});
-      html+='</div>';
+      html+='<div class="p-3"><div class="space-y-1">';
+      s.items.forEach(function(it){
+        html+='<div class="flex justify-between items-center text-sm py-1 px-2 rounded hover:bg-surface-low"><span class="text-txt2">'+esc(it.dish)+'</span><span class="font-semibold text-primary">'+fmtK(it.price)+'</span></div>';
+      });
+      html+='</div></div>';
     }
     html+='</div>';
   });
-  html+='</section>';
-
+  html+='</div>';
   return html;
 }
 
@@ -801,7 +807,7 @@ function renderAll(){renderNav();
   var bnr=document.getElementById('auth-banner');
   if(bnr)bnr.innerHTML=isAdmin?'':'<div class="flex items-center gap-2 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg mb-2 cursor-pointer hover:bg-amber-100" onclick="openLoginModal()"><span class="mi text-[16px]">lock</span>'+t('readOnly')+'</div>';var c='';
   if(tab==='overview')c=renderOverview();else if(tab==='bills')c=renderBills();
-  else if(tab==='payments')c=renderPayments();else if(tab==='guide')c=renderGuide();else if(tab==='people')c=renderPeople();
+  else if(tab==='payments')c=renderPayments();else if(tab==='guide')c=renderGuide();else if(tab==='shops')c=renderShops();else if(tab==='people')c=renderPeople();
   document.getElementById('tab-content').innerHTML=c;wireEvents();}
 function wireEvents(){
   document.querySelectorAll('[data-eb]').forEach(function(el){el.onclick=function(){var b=bills.find(function(x){return x.id===el.getAttribute('data-eb')});if(b)openEditModal('bill',b);};});
