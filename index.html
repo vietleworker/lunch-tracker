@@ -622,7 +622,7 @@ function renderBills(){
               html+='<div class="flex justify-between items-center text-sm py-1.5 px-2 rounded-lg cursor-pointer hover:bg-surface-low transition-colors" data-ep="'+(existingPayment?existingPayment.id:'')+'">';
             }else{
               // Unpaid: show red, click to quick-add payment
-              html+='<div class="flex justify-between items-center text-sm py-1.5 px-2 rounded-lg bg-error-c/15 cursor-pointer hover:bg-error-c/25 transition-colors active:scale-[.98]" data-qp="1" data-en="'+esc(item.en)+'" data-date="'+esc(bill.date)+'" data-price="'+(item.price||0)+'">';
+              html+='<div class="flex justify-between items-center text-sm py-1.5 px-2 rounded-lg bg-error-c/15 cursor-pointer hover:bg-error-c/25 transition-colors active:scale-[.98]" data-qp="1" data-en="'+esc(item.en)+'" data-date="'+esc(bill.date)+'" data-price="'+(item.price||0)+'" data-billid="'+bill.id+'">';
             }
             html+='<div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold" style="background:'+bg+';color:'+fg+'">'+initials(item.en)+'</div>';
             html+='<div><span class="font-medium">'+esc(item.en)+'</span>';
