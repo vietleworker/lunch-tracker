@@ -453,116 +453,140 @@ export default {
         const txYear = txD.getFullYear();
         const txMonth = txD.getMonth();
 
-        // ═══ DEDUPLICATION: check if sepayId already processed ═══
-        const dupQuery = await fetch(
-          `${FSURL}/payments:runQuery`,
-          {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              structuredQuery: {
-                from: [{ collectionId: "payments" }],
-                where: {
-                  fieldFilter: {
-                    field: { fieldPath: "sepayId" },
-                    op: "EQUAL",
-                    value: { integerValue: String(txId) }
-                  }
-                },
-                limit: 1
-              }
-            })
-          }
-        );
-        const dupResult = await dupQuery.json();
-        if (Array.isArray(dupResult) && dupResult.some(r => r.document)) {
-          return new Response(JSON.stringify({
-            success: true, skipped: "duplicate", sepayId: txId, member: matched.en
-          }), { headers: H });
-        }
-
-        // ═══ SIMPLE PARSER: 1 transfer = 1 payment ═══
-        // Only extract the COVERS DAY from content. Amount = transferAmount always.
-        const txD = new Date(txDate.replace(" ", "T"));
-        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        const todayD = new Date();
-        const todayStr = todayD.getDate().toString().padStart(2,"0") + " " + months[todayD.getMonth()] + " " + todayD.getFullYear();
-        const txYear = txD.getFullYear();
-        const txMonth = txD.getMonth();
+        // Smart content parsing
+        // Format: "name [amount day] [amount day] ..."
         const todayDay = txD.getDate();
 
-        let coversDay = todayDay; // default: transfer date
-
-        // Clean content for day extraction
+        // Clean content: strip out bank metadata BEFORE extracting numbers
         let cleanContent = content + " " + desc;
-        // Remove matched member name
+        // Remove member names
         cleanContent = cleanContent.replace(new RegExp(matched.en.toLowerCase(), "gi"), " ");
         if (matched.vn) cleanContent = cleanContent.replace(new RegExp(matched.vn.toLowerCase(), "gi"), " ");
-        // Remove bank reference patterns
+        // Remove bank reference codes and account numbers (6+ digit numbers are junk)
         cleanContent = cleanContent.replace(/FT\d+/gi, " ");
-        cleanContent = cleanContent.replace(/MBVCB[\d.]+[A-Z0-9]*/gi, " ");
+        cleanContent = cleanContent.replace(/MBVCB[\.\d]+/gi, " ");
         cleanContent = cleanContent.replace(/[A-Z0-9]{8,}/gi, " ");
-        // Remove timestamps: HH:MM:SS, HH:MM
-        cleanContent = cleanContent.replace(/\d{1,2}:\d{2}(:\d{2})?/g, " ");
-        // Remove SePay-style refs: digits-digits-timestamp
-        cleanContent = cleanContent.replace(/\d+-\d+-\d{2}:\d{2}:\d{2}/g, " ");
-        // Remove 5+ digit numbers (account numbers, refs)
-        cleanContent = cleanContent.replace(/\d{5,}/g, " ");
-        // Remove "CT tu...toi...tai BANK" pattern
+        cleanContent = cleanContent.replace(/\d{5,}/g, " "); // 5+ digit numbers = junk
+        // Remove "CT tu ... toi ... tai BANK" pattern
         cleanContent = cleanContent.replace(/ct\s+tu[\s\S]*?(toi|$)/gi, " ");
         cleanContent = cleanContent.replace(/toi\s+[\s\S]*?(tai|$)/gi, " ");
         cleanContent = cleanContent.replace(/tai\s+\w*bank/gi, " ");
-        // Remove common VN bank transfer keywords
-        cleanContent = cleanContent.replace(/\b(chuyen|tien|tu|toi|tai|cho|tra|pay|ck|chuyen\s*khoan|nguyen|thi|anh|van|le|tran|pham|hoang|ngo|dang|bui|do|truong|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, " ");
-        // Handle "Nk" suffix → convert to amount marker (ignore, we use transferAmount)
-        // But recognize "25k" means the number is an AMOUNT not a day — so remove it
-        cleanContent = cleanContent.replace(/\d+\s*k\b/gi, " ");
+        // Remove common Vietnamese bank transfer keywords
+        cleanContent = cleanContent.replace(/\b(chuyen|tien|tu|toi|tai|cho|tra|pay|nguyen|thi|anh|van|le|tran|pham|hoang|ngo|dang|bui|do|truong|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, " ");
+        // Handle "40k" suffix
+        cleanContent = cleanContent.replace(/(\d+)\s*k\b/gi, "$1");
         cleanContent = cleanContent.trim();
 
-        // Extract remaining small numbers (1-31) as potential day
-        const nums = cleanContent.match(/\b(\d{1,2})\b/g);
-        if (nums) {
-          const validDays = nums.map(Number).filter(d => d >= 1 && d <= 31);
-          if (validDays.length === 1) {
-            coversDay = validDays[0]; // Single day found → use it
-          } else if (validDays.length > 1) {
-            // Multiple days: pick the one closest to transfer date
-            const txDay = txD.getDate();
-            coversDay = validDays.reduce((best, d) =>
-              Math.abs(d - txDay) < Math.abs(best - txDay) ? d : best
-            );
+        const nums = cleanContent.match(/\d+/g);
+
+        let coversDates = [];
+
+        if (!nums || nums.length === 0) {
+          // No numbers → covers today, full amount
+          coversDates = [{ day: todayDay, amt: amount }];
+        } else {
+          // Check if pairs: amount+day pattern
+          // Numbers > 31 are amounts (in thousands), numbers 1-31 are days
+          const allNums = nums.map(Number);
+          const amounts = [];
+          const days = [];
+
+          // Try to detect pairs: look at sequence
+          // If alternating big/small: "50 11 40 12" → pairs
+          // If all small (1-31): "11 12 13" → just days, split evenly
+          const hasLargeNums = allNums.some(n => n > 31);
+
+          if (hasLargeNums) {
+            // Parse as [amount, day] pairs - cap amounts to reasonable lunch range
+            const MAX_LUNCH_K = 500; // 500k = max per-day lunch
+            for (let i = 0; i < allNums.length; i++) {
+              if (allNums[i] > 31 && allNums[i] <= MAX_LUNCH_K) {
+                amounts.push(allNums[i] * 1000); // convert to VND
+                if (i + 1 < allNums.length && allNums[i + 1] >= 1 && allNums[i + 1] <= 31) {
+                  days.push(allNums[i + 1]);
+                  i++; // skip day
+                } else {
+                  days.push(todayDay); // no day specified, use today
+                }
+              } else if (allNums[i] >= 1 && allNums[i] <= 31) {
+                // Standalone day without preceding amount
+                days.push(allNums[i]);
+                amounts.push(0); // will be filled later
+              }
+            }
+            // Fill 0 amounts: split remaining evenly
+            const totalSpecified = amounts.reduce((s, a) => s + a, 0);
+            const zeroCount = amounts.filter(a => a === 0).length;
+            if (zeroCount > 0 && totalSpecified < amount) {
+              const perZero = Math.round((amount - totalSpecified) / zeroCount);
+              for (let i = 0; i < amounts.length; i++) {
+                if (amounts[i] === 0) amounts[i] = perZero;
+              }
+            }
+            for (let i = 0; i < days.length; i++) {
+              coversDates.push({ day: days[i], amt: amounts[i] || Math.round(amount / days.length) });
+            }
+          } else {
+            // All small numbers = just days, split amount evenly
+            const validDays = allNums.filter(d => d >= 1 && d <= 31);
+            if (validDays.length > 0) {
+              const perDay = Math.round(amount / validDays.length);
+              for (let i = 0; i < validDays.length; i++) {
+                const dayAmt = (i === validDays.length - 1) ? amount - perDay * (validDays.length - 1) : perDay;
+                coversDates.push({ day: validDays[i], amt: dayAmt });
+              }
+            } else {
+              coversDates = [{ day: todayDay, amt: amount }];
+            }
           }
-          // If no valid days found, coversDay stays as transfer date
         }
 
-        const dd = String(coversDay).padStart(2, "0");
-        const coversStr = dd + " " + months[txMonth] + " " + txYear;
+        // Sanity check: parsed total must be within 10x of actual transfer
+        const parsedTotal = coversDates.reduce((s, c) => s + (c.amt || 0), 0);
+        if (parsedTotal > amount * 10 || parsedTotal === 0) {
+          // Way off — fallback to "covers today with full amount"
+          coversDates = [{ day: todayDay, amt: amount }];
+        }
+        // If parsed total is way less than actual amount and only days specified, split evenly
+        if (parsedTotal < amount * 0.5 && coversDates.length > 1 && coversDates.every(c => c.amt < 1000)) {
+          const perDay = Math.round(amount / coversDates.length);
+          coversDates = coversDates.map((c, i) => ({
+            day: c.day,
+            amt: (i === coversDates.length - 1) ? amount - perDay * (coversDates.length - 1) : perDay
+          }));
+        }
 
-        // Create ONE payment
-        const paymentPayload = {
-          fields: {
-            en: { stringValue: matched.en },
-            vn: { stringValue: matched.vn },
-            amount: { integerValue: String(amount) },
-            covers: { stringValue: coversStr },
-            date: { stringValue: todayStr },
-            method: { stringValue: "Bank Transfer" },
-            source: { stringValue: "sepay_webhook" },
-            sepayId: { integerValue: String(txId) },
-            refCode: { stringValue: refCode },
-            rawContent: { stringValue: (body.content || "").substring(0, 200) },
-            createdAt: { timestampValue: new Date().toISOString() }
-          }
-        };
+        // Create payments
+        const created = [];
+        for (const cd of coversDates) {
+          const dd = String(cd.day).padStart(2, "0");
+          const coversStr = dd + " " + months[txMonth] + " " + txYear;
 
-        await fetch(`${FSURL}/payments`, {
-          method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify(paymentPayload)
-        });
+          const paymentPayload = {
+            fields: {
+              en: { stringValue: matched.en },
+              vn: { stringValue: matched.vn },
+              amount: { integerValue: String(cd.amt) },
+              covers: { stringValue: coversStr },
+              date: { stringValue: todayStr },
+              method: { stringValue: "Bank Transfer" },
+              source: { stringValue: "sepay_webhook" },
+              sepayId: { integerValue: String(txId) },
+              refCode: { stringValue: refCode },
+              createdAt: { timestampValue: new Date().toISOString() }
+            }
+          };
+
+          await fetch(`${FSURL}/payments`, {
+            method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify(paymentPayload)
+          });
+          created.push({ covers: coversStr, amount: cd.amt });
+        }
 
         return new Response(JSON.stringify({
           success: true, matched: true,
-          member: matched.en, amount, covers: coversStr, sepayId: txId
+          member: matched.en, amount, payments: created, sepayId: txId
         }), { headers: H });
 
       } catch (e) {
