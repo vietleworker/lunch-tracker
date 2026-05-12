@@ -112,7 +112,7 @@ var isAdmin=localStorage.getItem('lt-auth')==='1';
 function sha256(str){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)).then(function(b){return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');});}
 function logout(){isAdmin=false;localStorage.removeItem('lt-auth');renderAll();}
 
-var L={en:{overview:'Overview',bills:'Bills',payments:'Payments',people:'Members',shops:'Shops',shopName:'Shop name',addShop:'Add Shop',editShop:'Edit Shop',menuItems:'Menu',addDish:'Add dish',selectShop:'Select shop',selectDish:'Select dish',noShop:'Manual input',shopSaved:'Shop saved',shopDeleted:'Shop deleted',unmatchedPayments:'Unmatched payments',assignToBill:'Assign to bill',noBill:'No bill',saveShop:'Save shop',addTx:'Add Transaction',
+var L={en:{overview:'Overview',bills:'Bills',payments:'Payments',people:'Members',shops:'Shops',shopName:'Shop name',addShop:'Add Shop',editShop:'Edit Shop',menuItems:'Menu',addDish:'Add dish',selectShop:'Select shop',selectDish:'Select dish',noShop:'Manual input',shopSaved:'Shop saved',mealLabel:'Meal',labelLunch:'Lunch',labelDinner:'Dinner',labelSnack:'Snack',labelOther:'Other',selectBill:'Select bill',shopDeleted:'Shop deleted',unmatchedPayments:'Unmatched payments',assignToBill:'Assign to bill',noBill:'No bill',saveShop:'Save shop',addTx:'Add Transaction',
 totalBills:'Total bills',totalPaid:'Total paid',outstanding:'Outstanding',count:'Count',
 topContrib:'Top contributor',recentActivity:'Recent activity',
 notYetPaid:'Not yet paid',collected:'collected',received:'Received',billTotal:'Bill total',
@@ -141,7 +141,7 @@ avatarColor:'Avatar color',saveMember:'Save member',deleteMember:'Delete member'
     guideAcct:'Account number',guideScanQR:'Scan QR to pay',guideHowTo:'How it works',guideStep1:'Transfer money to the account above',guideStep2:'In the transfer content write your name + day info',guideStep3:'The system auto-detects and records your payment',guideScTitle1:'Scenario 1: Pay for today',guideScDesc1:'You ate lunch today and want to pay right away.',guideScTransfer1:'Transfer: any amount',guideScWrite1:'Write in content:',guideScResult1:'System creates 1 payment for today with full transfer amount.',guideScTitle2:'Scenario 2: Pay for a specific day',guideScDesc2:'You ate lunch on the 12th and bill was 40k. You transfer 40000d.',guideScTransfer2:'Transfer: 40000d',guideScWrite2:'Write in content:',guideScResult2:'System creates 1 payment: 40000d for day 12.',guideScNote2:'Number 40 = 40000d (in thousands). Number 12 = day 12 of this month.',guideScTitle3:'Scenario 3: Pay for 2 days split evenly',guideScDesc3:'You ate on the 11th and 12th. Total 90k. Transfer 90000d.',guideScTransfer3:'Transfer: 90000d',guideScWrite3:'Write in content:',guideScResult3:'System creates 2 payments: 45000d day 11 + 45000d day 12 (split evenly).',guideScNote3:'Only day numbers (1-31) and no amounts. System splits total evenly.',guideScTitle4:'Scenario 4: Pay 2 days with different amounts',guideScDesc4:'Day 11 bill was 50k and day 12 was 40k. Transfer 90000d.',guideScTransfer4:'Transfer: 90000d',guideScWrite4:'Write in content:',guideScResult4:'System creates 2 payments: 50000d day 11 + 40000d day 12.',guideScNote4:'Format: amount day amount day. Numbers > 31 = amount (thousands) and 1-31 = day.',guideScTitle5:'Scenario 5: Pay for the whole week',guideScDesc5:'You ate Mon-Fri (days 11-15). Total 200k. Transfer 200000d.',guideScTransfer5:'Transfer: 200000d',guideScWrite5:'Write in content:',guideScResult5:'System creates 5 payments of 40000d each (200k split across 5 days).',guideFormatTitle:'Transfer content format',guideFormatName:'Your name (English or Vietnamese)',guideFormatNoDay:'No day = payment covers today',guideFormatNoAmt:'No amount = total split evenly across days',
     guideNames:'Name list',guideWarn:'Write your name correctly so the system can auto-detect. Wrong name = not recorded automatically.',
     guideContent:'Transfer content',login:'Login to edit',logout:'Logout',readOnly:'View only — login to edit',loginTitle:'Admin Login',loginHint:'Enter password to enable editing',wrongPass:'Wrong password',loginBtn:'Login',settingsTitle:'Settings',changePass:'Change password',newPass:'New password',confirmPass:'Confirm new password',passMismatch:'Passwords do not match',passChanged:'Password changed!',savePass:'Save password'},
-vi:{overview:'T\u1ed5ng quan',bills:'H\u00f3a \u0111\u01a1n',payments:'Thanh to\u00e1n',people:'Th\u00e0nh vi\u00ean',shops:'C\u1eeda h\u00e0ng',shopName:'T\u00ean c\u1eeda h\u00e0ng',addShop:'Th\u00eam c\u1eeda h\u00e0ng',editShop:'S\u1eeda c\u1eeda h\u00e0ng',menuItems:'Th\u1ef1c \u0111\u01a1n',addDish:'Th\u00eam m\u00f3n',selectShop:'Ch\u1ecdn c\u1eeda h\u00e0ng',selectDish:'Ch\u1ecdn m\u00f3n',noShop:'Nh\u1eadp tay',shopSaved:'\u0110\u00e3 l\u01b0u',shopDeleted:'\u0110\u00e3 x\u00f3a',unmatchedPayments:'Kh\u00f4ng kh\u1edbp bill',assignToBill:'G\u00e1n v\u00e0o bill',noBill:'Ch\u01b0a c\u00f3 bill',saveShop:'L\u01b0u',addTx:'Th\u00eam Giao D\u1ecbch',
+vi:{overview:'T\u1ed5ng quan',bills:'H\u00f3a \u0111\u01a1n',payments:'Thanh to\u00e1n',people:'Th\u00e0nh vi\u00ean',shops:'C\u1eeda h\u00e0ng',shopName:'T\u00ean c\u1eeda h\u00e0ng',addShop:'Th\u00eam c\u1eeda h\u00e0ng',editShop:'S\u1eeda c\u1eeda h\u00e0ng',menuItems:'Th\u1ef1c \u0111\u01a1n',addDish:'Th\u00eam m\u00f3n',selectShop:'Ch\u1ecdn c\u1eeda h\u00e0ng',selectDish:'Ch\u1ecdn m\u00f3n',noShop:'Nh\u1eadp tay',shopSaved:'\u0110\u00e3 l\u01b0u',mealLabel:'B\u1eefa \u0103n',labelLunch:'Tr\u01b0a',labelDinner:'Chi\u1ec1u/T\u1ed1i',labelSnack:'\u0102n v\u1eb7t',labelOther:'Kh\u00e1c',selectBill:'Ch\u1ecdn bill',shopDeleted:'\u0110\u00e3 x\u00f3a',unmatchedPayments:'Kh\u00f4ng kh\u1edbp bill',assignToBill:'G\u00e1n v\u00e0o bill',noBill:'Ch\u01b0a c\u00f3 bill',saveShop:'L\u01b0u',addTx:'Th\u00eam Giao D\u1ecbch',
 totalBills:'T\u1ed5ng h\u00f3a \u0111\u01a1n',totalPaid:'\u0110\u00e3 \u0111\u00f3ng',outstanding:'C\u00f2n thi\u1ebfu',count:'S\u1ed1 l\u01b0\u1ee3ng',
 topContrib:'Ng\u01b0\u1eddi \u0111\u00f3ng g\u00f3p nhi\u1ec1u nh\u1ea5t',recentActivity:'Ho\u1ea1t \u0111\u1ed9ng g\u1ea7n \u0111\u00e2y',
 notYetPaid:'Ch\u01b0a thanh to\u00e1n',collected:'\u0111\u00e3 thu',received:'\u0110\u00e3 nh\u1eadn',billTotal:'T\u1ed5ng H\u0110',
@@ -224,6 +224,7 @@ function paymentsForBill(bill){
   var billNorm=normDate(bill.date);
   if(!billNorm)return[];
   return payments.filter(function(p){
+    if(p.billId)return p.billId===bill.id;
     var covers=p.covers||p.date||'';
     return normDate(covers)===billNorm;
   });
@@ -380,8 +381,12 @@ function calcMemberStats(){
 }
 
 function getUnmatchedPayments(){
-  var billDates={};bills.forEach(function(b){billDates[normDate(b.date)]=true;});
-  return payments.filter(function(p){return!billDates[normDate(p.covers||p.date)];});
+  var billIds={};var billDates={};
+  bills.forEach(function(b){billIds[b.id]=true;billDates[normDate(b.date)]=true;});
+  return payments.filter(function(p){
+    if(p.billId)return!billIds[p.billId];
+    return!billDates[normDate(p.covers||p.date)];
+  });
 }
 function renderOverview(){
   var totalB=bills.reduce(function(s,b){return s+(b.total||0)},0);
@@ -565,6 +570,7 @@ function renderBills(){
     if(open){
       html+=weekSummary(groups[g.key]);
       html+='<div class="space-y-4">';
+      var labelIcons={lunch:'\u2600',dinner:'\u263D',snack:'\u2615',other:'\u2726'};
       groups[g.key].forEach(function(bill){
         var bp=paymentsForBill(bill);var received=bp.reduce(function(s,p){return s+(p.amount||0)},0);
         var total=bill.total||0;var pct=total>0?Math.min(100,Math.round(received/total*100)):0;
@@ -835,7 +841,7 @@ function wireEvents(){
     var date=el.getAttribute('data-date');
     var price=parseInt(el.getAttribute('data-price'))||0;
     var m=members.find(function(x){return x.en===en});
-    openQuickPayment(en,m?m.vn:'',date,price);
+    var billid=el.getAttribute('data-billid')||'';openQuickPayment(en,m?m.vn:'',date,price,billid);
   };});
   document.querySelectorAll('[data-em]').forEach(function(el){el.onclick=function(){var m=members.find(function(x){return x.id===el.getAttribute('data-em')});if(m)openMemberModal(m);};});
 }
@@ -1017,12 +1023,12 @@ function doChangePass(e){
 }
 
 /* ── MODALS ── */
-function openQuickPayment(en,vn,date,price){if(!isAdmin){openLoginModal();return;}
+function openQuickPayment(en,vn,date,price,billId){if(!isAdmin){openLoginModal();return;}
   var m=memberByEn(en);var bg=m?m.bg:'#e6e8ea',fg=m?m.fg:'#424656';
   var host=document.getElementById('modal-host');
   host.innerHTML='<div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" id="qpbg"><div class="bg-surface-white w-full max-w-[400px] rounded-[20px] shadow-modal overflow-hidden" onclick="event.stopPropagation()">'+
   '<div class="flex items-center justify-between px-6 py-4 border-b border-outline-v/30"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold" style="background:'+bg+';color:'+fg+'">'+initials(en)+'</div><div><div class="text-sm font-bold">'+esc(en)+'</div><div class="text-xs text-txt3">'+esc(vn)+'</div></div></div><button onclick="closeQuickPayment()" class="w-8 h-8 rounded-full hover:bg-surface-low flex items-center justify-center text-txt3"><span class="mi text-[20px]">close</span></button></div>'+
-  '<form id="qpf" class="px-6 py-5 space-y-4" onsubmit="submitQuickPayment(event,\''+esc(en)+'\',\''+esc(vn)+'\')" >'+
+  '<form id="qpf" class="px-6 py-5 space-y-4" onsubmit="submitQuickPayment(event,\''+esc(en)+'\',\''+esc(vn)+'\')" ><input type="hidden" name="billId" value="'+(billId||'')+'"/>'+
   '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('amount')+'</label><div class="relative flex items-center bg-surface-low rounded-xl px-4 py-2 focus-within:ring-1 focus-within:ring-primary"><input id="qp-amt" name="amount" type="number" inputmode="numeric" value="'+(price||'')+'" placeholder="0" class="w-full bg-transparent border-none p-0 focus:ring-0 text-headline font-bold text-right outline-none" required autofocus/><span class="text-headline text-txt3 ml-2">&#273;</span></div></div>'+
   '<div class="grid grid-cols-2 gap-3">'+
   '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('method')+'</label><div class="flex gap-2"><label class="flex-1 cursor-pointer"><input type="radio" name="method" value="Bank Transfer" class="peer sr-only" checked/><div class="text-center py-2 rounded-lg border border-outline-v text-xs peer-checked:bg-primary-c peer-checked:text-white peer-checked:border-primary transition-all flex items-center justify-center gap-1"><span class="mi text-[16px]">account_balance</span>'+t('bankTransfer')+'</div></label><label class="flex-1 cursor-pointer"><input type="radio" name="method" value="Cash" class="peer sr-only"/><div class="text-center py-2 rounded-lg border border-outline-v text-xs peer-checked:bg-primary-c peer-checked:text-white peer-checked:border-primary transition-all flex items-center justify-center gap-1"><span class="mi text-[16px]">payments</span>'+t('cash')+'</div></label></div></div>'+
@@ -1048,7 +1054,8 @@ function submitQuickPayment(e,en,vn){
     }
   }
   
-  var payload={en:en,vn:vn,amount:parseInt(fd.get('amount'))||0,covers:coversDate,method:fd.get('method')||'Bank Transfer',date:today(),createdAt:new Date()};
+  var bId=fd.get('billId')||'';
+  var payload={en:en,vn:vn,amount:parseInt(fd.get('amount'))||0,covers:coversDate,method:fd.get('method')||'Bank Transfer',date:today(),createdAt:new Date()};if(bId)payload.billId=bId;
   db.collection('payments').add(payload)
     .then(function(){closeQuickPayment();})
     .catch(function(err){alert(err.message);if(btn)btn.disabled=false;});
@@ -1100,7 +1107,10 @@ function renderModal(){
     });
 
     form='<div class="space-y-4"><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('total')+'</label><div class="relative flex items-center bg-surface-low rounded-xl px-4 py-2 focus-within:ring-1 focus-within:ring-primary"><input name="total" type="number" inputmode="numeric" value="'+(d.total||'')+'" placeholder="0" class="w-full bg-transparent border-none p-0 focus:ring-0 text-headline font-bold text-right outline-none" required/><span class="text-headline text-txt3 ml-2">&#273;</span></div></div>'+
-    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('date')+'</label><input name="date" type="date" value="'+toInputDate(d.date||today())+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/></div>'+
+    '<div class="grid grid-cols-2 gap-3"><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('date')+'</label><input name="date" type="date" value="'+toInputDate(d.date||today())+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/></div>'+
+    '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('mealLabel')+'</label><div class="flex flex-wrap gap-1.5 mt-1">'+
+    [{v:'lunch',icon:'\u2600',l:'labelLunch'},{v:'dinner',icon:'\u263D',l:'labelDinner'},{v:'snack',icon:'\u2615',l:'labelSnack'},{v:'other',icon:'\u2726',l:'labelOther'}].map(function(opt){return '<label class="cursor-pointer"><input type="radio" name="label" value="'+opt.v+'" class="peer sr-only"'+((d.label||'lunch')===opt.v?' checked':'')+'/><div class="px-2.5 py-1 rounded-lg border border-outline-v text-xs peer-checked:bg-primary-c peer-checked:text-white peer-checked:border-primary transition-all text-center">'+opt.icon+' '+t(opt.l)+'</div></label>';}).join('')+
+    '</div></div></div>'+
     '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('note')+'</label><textarea name="note" placeholder="Com Ga Xe x4..." class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none resize-y min-h-[60px]">'+esc(d.note||'')+'</textarea></div>'+
     '<div class="mb-4"><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('selectShop')+'</label><select name="shop" id="shopSelect" onchange="onShopChange(this.value)" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"><option value="">'+t('noShop')+'</option>'+shops.map(function(s){return '<option value="'+esc(s.id)+'"'+(d.shop===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
     '<div><div class="flex justify-between items-center mb-2"><label class="text-label font-bold text-txt3 uppercase tracking-wider">'+t('orderDetails')+'</label><div class="flex items-center gap-3"><label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="selectAllMembers" onchange="toggleAllMembers(this.checked)" class="rounded border-outline-v text-primary focus:ring-primary h-4 w-4"/><span class="text-xs text-txt3">'+t('selectAll')+'</span></label><span class="bg-surface-high px-2 py-0.5 rounded-full text-label text-primary" id="memberCount">0</span></div></div><div class="space-y-2" id="memberItems">'+memberList+'</div></div>'+
@@ -1154,12 +1164,15 @@ function renderModal(){
   var bab=document.getElementById('billAssignBox');
   if(bab&&bills.length){
     var sortedBills=bills.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-    var opts='<option value="">-- Assign to bill --</option>';
+    var lblI={lunch:'\u2600',dinner:'\u263D',snack:'\u2615',other:'\u2726'};
+    var opts='<option value="">-- '+t('selectBill')+' --</option>';
     sortedBills.forEach(function(b){
-      var sel=(modal.data&&normDate(modal.data.covers)===normDate(b.date))?' selected':'';
-      opts+='<option value="'+toInputDate(b.date)+'"'+sel+'>'+displayDate(b.date)+' - '+(b.note||'').substring(0,30)+'</option>';
+      var sel=(modal.data&&(modal.data.billId===b.id||((!modal.data.billId)&&normDate(modal.data.covers)===normDate(b.date))))?' selected':'';
+      var lbl=b.label?(lblI[b.label]||'')+' ':'';
+      opts+='<option value="'+b.id+'"'+sel+'>'+lbl+displayDate(b.date)+' - '+(b.note||'').substring(0,30)+'</option>';
     });
-    bab.innerHTML='<select onchange="if(this.value)document.getElementById(\'coversDate\').value=this.value" class="w-full bg-surface-low border border-outline-v/50 rounded-lg px-3 py-1.5 text-xs mt-1.5" style="color:#525252">'+opts+'</select><div class="text-[10px] text-txt3 mt-0.5">Select a bill to quickly assign this payment</div>';
+    bab.innerHTML='<select id="billIdSelect" onchange="var bi=this.value;if(bi){var bb=window._sortedBills.find(function(x){return x.id===bi;});if(bb)document.getElementById(\'coversDate\').value=window._toInputDate(bb.date);}" class="w-full bg-surface-low border border-outline-v/50 rounded-lg px-3 py-1.5 text-xs mt-1.5" style="color:#525252">'+opts+'</select><div class="text-[10px] text-txt3 mt-0.5">'+t('selectBill')+'</div>';
+    window._sortedBills=sortedBills;window._toInputDate=toInputDate;
   }
 }
 
@@ -1231,7 +1244,7 @@ function handleSubmit(e){
   e.preventDefault();if(saving||compressing)return;saving=true;
   var fd=new FormData(e.target);var payload,coll;
   if(modal.type==='bill'){
-    coll='bills';payload={date:fd.get('date'),total:parseInt(fd.get('total'))||0,note:fd.get('note')||'',shop:fd.get('shop')||''};
+    coll='bills';payload={date:fd.get('date'),total:parseInt(fd.get('total'))||0,note:fd.get('note')||'',shop:fd.get('shop')||'',label:fd.get('label')||'lunch'};
     // Collect member items
     var items=[];var sortedM=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
     sortedM.forEach(function(m,idx){
@@ -1245,6 +1258,7 @@ function handleSubmit(e){
   }else{
     coll='payments';var parts=(fd.get('member')||'|').split('|');
     payload={en:parts[0],vn:parts[1]||'',amount:parseInt(fd.get('amount'))||0,covers:fromDateInput(fd.get('covers')),method:fd.get('method')||'Bank Transfer',date:fromDateInput(fd.get('date'))};
+    var billIdSel=document.getElementById('billIdSelect');if(billIdSel&&billIdSel.value)payload.billId=billIdSel.value;
   }
   if(pendingPhoto)payload.photoData=pendingPhoto;
   else if(modal.mode==='edit'&&modal.data.photoData&&!pendingPhoto)payload.photoData=firebase.firestore.FieldValue.delete();
