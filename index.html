@@ -103,7 +103,7 @@ input[type=file]{display:none}
 <script>
 firebase.initializeApp({apiKey:"AIzaSyDrbRVGxjlU77S1AyfI4K7GFC-g5HI5FEo",authDomain:"lunche-81567.firebaseapp.com",projectId:"lunche-81567",storageBucket:"lunche-81567.firebasestorage.app",messagingSenderId:"1031125665255",appId:"1:1031125665255:web:cef82dd2abb76e61bca942"});
 var db=firebase.firestore();
-var bills=[],payments=[],members=[];
+var bills=[],payments=[],members=[],shops=[];
 var bOk=false,pOk=false,mOk=false;
 var tab='overview',modal=null,saving=false,pendingPhoto=null,compressing=false;
 var lang=localStorage.getItem('lt-lang')||'en';
@@ -112,7 +112,7 @@ var isAdmin=localStorage.getItem('lt-auth')==='1';
 function sha256(str){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)).then(function(b){return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');});}
 function logout(){isAdmin=false;localStorage.removeItem('lt-auth');renderAll();}
 
-var L={en:{overview:'Overview',bills:'Bills',payments:'Payments',people:'Members',addTx:'Add Transaction',
+var L={en:{overview:'Overview',bills:'Bills',payments:'Payments',people:'Members',shops:'Shops',shopName:'Shop name',addShop:'Add Shop',editShop:'Edit Shop',menuItems:'Menu',addDish:'Add dish',selectShop:'Select shop',selectDish:'Select dish',noShop:'Manual input',shopSaved:'Shop saved',shopDeleted:'Shop deleted',addTx:'Add Transaction',
 totalBills:'Total bills',totalPaid:'Total paid',outstanding:'Outstanding',count:'Count',
 topContrib:'Top contributor',recentActivity:'Recent activity',
 notYetPaid:'Not yet paid',collected:'collected',received:'Received',billTotal:'Bill total',
@@ -141,7 +141,7 @@ avatarColor:'Avatar color',saveMember:'Save member',deleteMember:'Delete member'
     guideAcct:'Account number',guideScanQR:'Scan QR to pay',guideHowTo:'How it works',guideStep1:'Transfer money to the account above',guideStep2:'In the transfer content write your name + day info',guideStep3:'The system auto-detects and records your payment',guideScTitle1:'Scenario 1: Pay for today',guideScDesc1:'You ate lunch today and want to pay right away.',guideScTransfer1:'Transfer: any amount',guideScWrite1:'Write in content:',guideScResult1:'System creates 1 payment for today with full transfer amount.',guideScTitle2:'Scenario 2: Pay for a specific day',guideScDesc2:'You ate lunch on the 12th and bill was 40k. You transfer 40000d.',guideScTransfer2:'Transfer: 40000d',guideScWrite2:'Write in content:',guideScResult2:'System creates 1 payment: 40000d for day 12.',guideScNote2:'Number 40 = 40000d (in thousands). Number 12 = day 12 of this month.',guideScTitle3:'Scenario 3: Pay for 2 days split evenly',guideScDesc3:'You ate on the 11th and 12th. Total 90k. Transfer 90000d.',guideScTransfer3:'Transfer: 90000d',guideScWrite3:'Write in content:',guideScResult3:'System creates 2 payments: 45000d day 11 + 45000d day 12 (split evenly).',guideScNote3:'Only day numbers (1-31) and no amounts. System splits total evenly.',guideScTitle4:'Scenario 4: Pay 2 days with different amounts',guideScDesc4:'Day 11 bill was 50k and day 12 was 40k. Transfer 90000d.',guideScTransfer4:'Transfer: 90000d',guideScWrite4:'Write in content:',guideScResult4:'System creates 2 payments: 50000d day 11 + 40000d day 12.',guideScNote4:'Format: amount day amount day. Numbers > 31 = amount (thousands) and 1-31 = day.',guideScTitle5:'Scenario 5: Pay for the whole week',guideScDesc5:'You ate Mon-Fri (days 11-15). Total 200k. Transfer 200000d.',guideScTransfer5:'Transfer: 200000d',guideScWrite5:'Write in content:',guideScResult5:'System creates 5 payments of 40000d each (200k split across 5 days).',guideFormatTitle:'Transfer content format',guideFormatName:'Your name (English or Vietnamese)',guideFormatNoDay:'No day = payment covers today',guideFormatNoAmt:'No amount = total split evenly across days',
     guideNames:'Name list',guideWarn:'Write your name correctly so the system can auto-detect. Wrong name = not recorded automatically.',
     guideContent:'Transfer content',login:'Login to edit',logout:'Logout',readOnly:'View only — login to edit',loginTitle:'Admin Login',loginHint:'Enter password to enable editing',wrongPass:'Wrong password',loginBtn:'Login',settingsTitle:'Settings',changePass:'Change password',newPass:'New password',confirmPass:'Confirm new password',passMismatch:'Passwords do not match',passChanged:'Password changed!',savePass:'Save password'},
-vi:{overview:'T\u1ed5ng quan',bills:'H\u00f3a \u0111\u01a1n',payments:'Thanh to\u00e1n',people:'Th\u00e0nh vi\u00ean',addTx:'Th\u00eam Giao D\u1ecbch',
+vi:{overview:'T\u1ed5ng quan',bills:'H\u00f3a \u0111\u01a1n',payments:'Thanh to\u00e1n',people:'Th\u00e0nh vi\u00ean',shops:'C\u1eeda h\u00e0ng',shopName:'T\u00ean c\u1eeda h\u00e0ng',addShop:'Th\u00eam c\u1eeda h\u00e0ng',editShop:'S\u1eeda c\u1eeda h\u00e0ng',menuItems:'Th\u1ef1c \u0111\u01a1n',addDish:'Th\u00eam m\u00f3n',selectShop:'Ch\u1ecdn c\u1eeda h\u00e0ng',selectDish:'Ch\u1ecdn m\u00f3n',noShop:'Nh\u1eadp tay',shopSaved:'\u0110\u00e3 l\u01b0u',shopDeleted:'\u0110\u00e3 x\u00f3a',addTx:'Th\u00eam Giao D\u1ecbch',
 totalBills:'T\u1ed5ng h\u00f3a \u0111\u01a1n',totalPaid:'\u0110\u00e3 \u0111\u00f3ng',outstanding:'C\u00f2n thi\u1ebfu',count:'S\u1ed1 l\u01b0\u1ee3ng',
 topContrib:'Ng\u01b0\u1eddi \u0111\u00f3ng g\u00f3p nhi\u1ec1u nh\u1ea5t',recentActivity:'Ho\u1ea1t \u0111\u1ed9ng g\u1ea7n \u0111\u00e2y',
 notYetPaid:'Ch\u01b0a thanh to\u00e1n',collected:'\u0111\u00e3 thu',received:'\u0110\u00e3 nh\u1eadn',billTotal:'T\u1ed5ng H\u0110',
@@ -1044,7 +1044,16 @@ function renderModal(){
       memberList+='<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style="background:'+bg+';color:'+fg+'">'+initials(m.en)+'</div>';
       memberList+='<div class="flex-1 min-w-0"><p class="text-sm font-semibold">'+esc(m.en)+'</p><p class="text-xs text-txt3">'+esc(m.vn)+'</p></div></div>';
       memberList+='<div class="grid grid-cols-2 gap-2 mt-2'+(checked?'':' hidden')+'" id="mi-fields-'+idx+'">';
-      memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('dish')+'</label><input name="dish_'+idx+'" value="'+esc(item?item.dish:'')+'" placeholder="Ph\u1edf b\u00f2..." class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm focus:ring-1 focus:ring-primary outline-none mt-0.5"/></div>';
+      var selShop=d.shop?shops.find(function(s){return s.id===d.shop}):null;
+      var dishField;
+      if(selShop&&selShop.items&&selShop.items.length){
+        dishField='<select name="dish_'+idx+'" onchange="onDishSelect('+idx+',this.value)" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm focus:ring-1 focus:ring-primary outline-none mt-0.5"><option value="">'+t('selectDish')+'</option>';
+        selShop.items.forEach(function(si){dishField+='<option value="'+esc(si.dish)+'" data-price="'+si.price+'"'+(item&&item.dish===si.dish?' selected':'')+'>'+esc(si.dish)+' ('+fmtK(si.price)+')</option>';});
+        dishField+='</select>';
+      }else{
+        dishField='<input name="dish_'+idx+'" value="'+esc(item?item.dish:'')+'" placeholder="Ph\u1edf b\u00f2..." class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm focus:ring-1 focus:ring-primary outline-none mt-0.5"/>';
+      }
+      memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('dish')+'</label>'+dishField+'</div>';
       memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('price')+'</label><div class="relative"><input name="price_'+idx+'" type="number" inputmode="numeric" value="'+(item?item.price:'')+'" placeholder="0" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right focus:ring-1 focus:ring-primary outline-none mt-0.5"/><span class="absolute right-2 top-1/2 text-[11px] text-txt3">&#273;</span></div></div>';
       memberList+='</div></div>';
     });
@@ -1052,6 +1061,7 @@ function renderModal(){
     form='<div class="space-y-4"><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('total')+'</label><div class="relative flex items-center bg-surface-low rounded-xl px-4 py-2 focus-within:ring-1 focus-within:ring-primary"><input name="total" type="number" inputmode="numeric" value="'+(d.total||'')+'" placeholder="0" class="w-full bg-transparent border-none p-0 focus:ring-0 text-headline font-bold text-right outline-none" required/><span class="text-headline text-txt3 ml-2">&#273;</span></div></div>'+
     '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('date')+'</label><input name="date" type="date" value="'+toInputDate(d.date||today())+'" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none" required/></div>'+
     '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('note')+'</label><textarea name="note" placeholder="Com Ga Xe x4..." class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none resize-y min-h-[60px]">'+esc(d.note||'')+'</textarea></div>'+
+    '<div class="mb-4"><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('selectShop')+'</label><select name="shop" id="shopSelect" onchange="onShopChange(this.value)" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"><option value="">'+t('noShop')+'</option>'+shops.map(function(s){return '<option value="'+esc(s.id)+'"'+(d.shop===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
     '<div><div class="flex justify-between items-center mb-2"><label class="text-label font-bold text-txt3 uppercase tracking-wider">'+t('orderDetails')+'</label><div class="flex items-center gap-3"><label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="selectAllMembers" onchange="toggleAllMembers(this.checked)" class="rounded border-outline-v text-primary focus:ring-primary h-4 w-4"/><span class="text-xs text-txt3">'+t('selectAll')+'</span></label><span class="bg-surface-high px-2 py-0.5 rounded-full text-label text-primary" id="memberCount">0</span></div></div><div class="space-y-2" id="memberItems">'+memberList+'</div></div>'+
     '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('photo')+'</label>'+photoHtml+'</div></div>';
   }else{
@@ -1101,11 +1111,61 @@ function renderModal(){
   document.getElementById('f').onsubmit=handleSubmit;
 }
 
+
+/* ── Shop Modal ── */
+var shopModal=null;
+function openShopModal(id){
+  if(!isAdmin){openLoginModal();return;}
+  if(id){
+    var s=shops.find(function(x){return x.id===id;});
+    var copyItems=(s.items||[]).map(function(i){return {dish:i.dish,price:i.price};});
+    shopModal={mode:'edit',data:{id:s.id,name:s.name,items:copyItems}};
+  }else{
+    shopModal={mode:'add',data:{name:'',items:[{dish:'',price:0}]}};
+  }
+  renderShopModal();
+}
+function closeShopModal(){shopModal=null;document.getElementById('modal-host').innerHTML='';renderAll();}
+function addShopItem(){if(!shopModal)return;shopModal.data.items.push({dish:'',price:0});renderShopModal();}
+function removeShopItem(idx){if(!shopModal)return;shopModal.data.items.splice(idx,1);renderShopModal();}
+
+function renderShopModal(){
+  if(!shopModal)return;
+  var d=shopModal.data;var isEdit=shopModal.mode==='edit';
+  var itemsHtml='';
+  (d.items||[]).forEach(function(it,i){
+    itemsHtml+='<div class="flex gap-2 items-center mb-2"><input name="sdish_'+i+'" value="'+esc(it.dish)+'" placeholder="Dish name" class="flex-1 bg-surface-low border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm"/><div class="relative w-28"><input name="sprice_'+i+'" type="number" value="'+(it.price||'')+'" placeholder="0" class="w-full bg-surface-low border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right"/><span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-txt3">\u0111</span></div><button type="button" onclick="removeShopItem('+i+')" class="text-error text-lg font-bold w-6 h-6 flex items-center justify-center">&times;</button></div>';
+  });
+  var html='<div class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onclick="if(event.target===this)closeShopModal()"><div class="bg-surface-white w-full max-w-[420px] rounded-[20px] shadow-modal flex flex-col overflow-hidden max-h-[90vh]" onclick="event.stopPropagation()"><div class="flex items-center justify-between px-6 py-4 border-b border-outline-v/30"><h2 class="text-title font-bold">'+(isEdit?t('editShop'):t('addShop'))+'</h2><button onclick="closeShopModal()" class="w-8 h-8 rounded-full hover:bg-surface-low flex items-center justify-center text-txt3"><span class="mi text-[20px]">close</span></button></div><form id="shopForm" class="px-6 py-4 overflow-y-auto flex-1"><div class="mb-4"><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('shopName')+'</label><input name="shopname" value="'+esc(d.name)+'" required class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm"/></div><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-2">'+t('menuItems')+'</label>'+itemsHtml+'<button type="button" onclick="addShopItem()" class="text-xs text-primary font-bold flex items-center gap-1 mt-1"><span class="mi text-[14px]">add</span>'+t('addDish')+'</button></div></form><div class="px-6 py-4 border-t border-outline-v/30 flex justify-end gap-3"><button type="button" onclick="closeShopModal()" class="px-4 py-2 rounded-lg text-primary border border-outline-v/30 text-sm font-semibold">'+t('cancel')+'</button>'+(isEdit?'<button type="button" onclick="deleteShop()" class="px-4 py-2 rounded-lg text-error border border-error-c text-sm font-semibold">'+t('delete')+'</button>':'')+'<button type="submit" form="shopForm" class="px-4 py-2 rounded-lg bg-primary-c text-white text-sm font-semibold">'+t('saveBill')+'</button></div></div></div>';
+  document.getElementById('modal-host').innerHTML=html;
+  document.getElementById('shopForm').onsubmit=function(e){
+    e.preventDefault();
+    var fd=new FormData(e.target);
+    var name=fd.get('shopname')||'';
+    var items=[];
+    for(var i=0;i<100;i++){
+      var dish=fd.get('sdish_'+i);if(dish===null)break;
+      var price=parseInt(fd.get('sprice_'+i))||0;
+      if(dish.trim())items.push({dish:dish.trim(),price:price});
+    }
+    var payload={name:name,items:items};
+    var op;
+    if(isEdit)op=db.collection('shops').doc(shopModal.data.id).update(payload);
+    else{payload.createdAt=new Date();op=db.collection('shops').add(payload);}
+    op.then(closeShopModal).catch(function(err){alert(err.message);});
+  };
+}
+function deleteShop(){
+  if(!shopModal||!shopModal.data.id)return;
+  if(!confirm(t('delete')+'?'))return;
+  db.collection('shops').doc(shopModal.data.id).delete().then(closeShopModal).catch(function(err){alert(err.message);});
+}
+
 function handleSubmit(e){
   e.preventDefault();if(saving||compressing)return;saving=true;
   var fd=new FormData(e.target);var payload,coll;
   if(modal.type==='bill'){
-    coll='bills';payload={date:fd.get('date'),total:parseInt(fd.get('total'))||0,note:fd.get('note')||''};
+    coll='bills';payload={date:fd.get('date'),total:parseInt(fd.get('total'))||0,note:fd.get('note')||'',shop:fd.get('shop')||''};
     // Collect member items
     var items=[];var sortedM=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
     sortedM.forEach(function(m,idx){
@@ -1150,6 +1210,22 @@ function toggleAllMembers(checked){
   var cbs=document.querySelectorAll('[data-mi]');
   cbs.forEach(function(cb,idx){cb.checked=checked;toggleMemberItem(idx);});
 }
+function onShopChange(shopId){
+  if(modal&&modal.data)modal.data.shop=shopId;
+  else if(modal)modal.data={shop:shopId};
+  renderModal();
+}
+function onDishSelect(idx,dish){
+  var shopId=document.getElementById('shopSelect');
+  if(!shopId)return;
+  var shop=shops.find(function(s){return s.id===shopId.value;});
+  if(!shop||!shop.items)return;
+  var item=shop.items.find(function(i){return i.dish===dish;});
+  if(item){
+    var priceInput=document.querySelector('[name="price_'+idx+'"]');
+    if(priceInput)priceInput.value=item.price;
+  }
+}
 function updateMemberCount(){
   var cnt=document.querySelectorAll('[data-mi]:checked').length;
   var el=document.getElementById('memberCount');
@@ -1160,6 +1236,7 @@ function updateMemberCount(){
 db.collection('bills').orderBy('createdAt').onSnapshot(function(snap){bills=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});bOk=true;render();});
 db.collection('payments').orderBy('createdAt').onSnapshot(function(snap){payments=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});pOk=true;render();});
 db.collection('members').onSnapshot(function(snap){members=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});mOk=true;render();});
+db.collection('shops').orderBy('name').onSnapshot(function(snap){shops=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});render();});
 document.getElementById('tab-content').innerHTML='<div class="text-center text-txt3 py-12">Connecting...</div>';
 
 /* ── SEED MEMBERS ── */
