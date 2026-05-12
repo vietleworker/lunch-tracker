@@ -445,14 +445,6 @@ export default {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        // Parse date: "2023-03-25 14:02:37" → "25 Mar 2023"
-        const txD = new Date(txDate.replace(" ", "T"));
-        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        const todayD = new Date();
-        const todayStr = todayD.getDate().toString().padStart(2,"0") + " " + months[todayD.getMonth()] + " " + todayD.getFullYear();
-        const txYear = txD.getFullYear();
-        const txMonth = txD.getMonth();
-
         // ═══ DEDUPLICATION: check if sepayId already processed ═══
         const dupQuery = await fetch(
           `${FSURL}/payments:runQuery`,
