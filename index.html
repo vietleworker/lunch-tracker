@@ -562,6 +562,30 @@ function renderBills(){
         html+='<div class="mt-1"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label '+(isPaid?'bg-secondary-c/20 text-secondary-on':'bg-tertiary-bg text-tertiary')+'""><span class="mi text-[14px]">'+(isPaid?'check_circle':'sync')+'</span>'+(isPaid?t('fullyPaid'):t('collecting'))+'</span></div>';
         html+='</div></div></div>';
         if(bill.photoData)html+='<img src="'+bill.photoData+'" class="w-full max-h-48 object-cover cursor-pointer" onclick="showLightbox(this.src)"/>';
+        // Daily mini-summary
+        (function(){
+          var di=bill.items||[];
+          if(!di.length)return;
+          var dSpend={};
+          di.forEach(function(it){if(it.price>0&&it.en)dSpend[it.en]=(dSpend[it.en]||0)+it.price;});
+          var dMax=0,dMin=Infinity,dMaxNames=[],dMinNames=[];
+          Object.keys(dSpend).forEach(function(en){
+            var p=dSpend[en];
+            if(p>dMax){dMax=p;dMaxNames=[en];}else if(p===dMax)dMaxNames.push(en);
+            if(p<dMin){dMin=p;dMinNames=[en];}else if(p===dMin)dMinNames.push(en);
+          });
+          var dDishCnt={};di.forEach(function(it){if(it.dish){var d=it.dish.trim();if(d)dDishCnt[d]=(dDishCnt[d]||0)+1;}});
+          var dTopDish='',dTopCnt=0;Object.keys(dDishCnt).forEach(function(d){if(dDishCnt[d]>dTopCnt){dTopCnt=dDishCnt[d];dTopDish=d;}});
+          var stats=[];
+          if(dMaxNames.length)stats.push('<span class="mi" style="font-size:12px;color:#dc2626">local_fire_department</span><b>'+esc(dMaxNames.join(' & '))+'</b> ('+fmtK(dMax)+')');
+          if(dMinNames.length&&dMin!==dMax)stats.push('<span class="mi" style="font-size:12px;color:#059669">eco</span><b>'+esc(dMinNames.join(' & '))+'</b> ('+fmtK(dMin)+')');
+          if(dTopDish)stats.push('<span class="mi" style="font-size:12px;color:#d97706">restaurant</span><b>'+esc(dTopDish)+'</b> ('+dTopCnt+'x)');
+          if(stats.length){
+            html+='<div style="background:#f8f9fc;border-bottom:1px solid #eaedf2;padding:8px 20px;display:flex;flex-wrap:wrap;gap:4px 16px;font-size:11px;color:#525252">';
+            stats.forEach(function(s){html+='<span style="display:inline-flex;align-items:center;gap:3px">'+s+'</span>';});
+            html+='</div>';
+          }
+        })();
         html+='<div class="p-5"><div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
         
         // Left column: Items list or Paid list
