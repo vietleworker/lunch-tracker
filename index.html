@@ -499,14 +499,23 @@ function renderBills(){
       });
     });
     var pplCount=Object.keys(pplSet).length;
-    // Most expensive eater
-    var maxItem=null,minItem=null;
+    // Most expensive / cheapest eater — aggregate per person first
+    var pplSpend={};
     allItems.forEach(function(it){
-      if(it.price>0){
-        if(!maxItem||it.price>maxItem.price)maxItem=it;
-        if(!minItem||it.price<minItem.price)minItem=it;
+      if(it.price>0&&it.en){
+        pplSpend[it.en]=(pplSpend[it.en]||0)+it.price;
       }
     });
+    var maxPrice=0,minPrice=Infinity,maxNames=[],minNames=[];
+    Object.keys(pplSpend).forEach(function(en){
+      var p=pplSpend[en];
+      if(p>maxPrice){maxPrice=p;maxNames=[en];}
+      else if(p===maxPrice)maxNames.push(en);
+      if(p<minPrice){minPrice=p;minNames=[en];}
+      else if(p===minPrice)minNames.push(en);
+    });
+    var maxItem=maxNames.length?{en:maxNames.join(' & '),price:maxPrice}:null;
+    var minItem=minNames.length&&minPrice!==maxPrice?{en:minNames.join(' & '),price:minPrice}:null;
     // Most popular dish
     var dishCnt={};allItems.forEach(function(it){if(it.dish){var d=it.dish.trim();if(d)dishCnt[d]=(dishCnt[d]||0)+1;}});
     var topDish='',topDishCnt=0;Object.keys(dishCnt).forEach(function(d){if(dishCnt[d]>topDishCnt){topDishCnt=dishCnt[d];topDish=d;}});
