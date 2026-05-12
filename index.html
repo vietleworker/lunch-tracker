@@ -223,11 +223,16 @@ function displayDate(ds){
 function paymentsForBill(bill){
   var billNorm=normDate(bill.date);
   if(!billNorm)return[];
-  return payments.filter(function(p){
+  var all=payments.filter(function(p){
     if(p.billId)return p.billId===bill.id;
     var covers=p.covers||p.date||'';
     return normDate(covers)===billNorm;
   });
+  // If bill has items, only include payments from members in the bill
+  var items=bill.items||[];
+  if(items.length===0)return all;
+  var billMembers={};items.forEach(function(it){if(it.en)billMembers[it.en]=true;});
+  return all.filter(function(p){return billMembers[p.en];});
 }
 
 function getWeekKey(dateStr){
