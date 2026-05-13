@@ -1104,7 +1104,7 @@ function renderModal(){
         // Multi-checkbox dish selector
         var checkboxes='';
         selShop.items.forEach(function(si,si_i){
-          var chkd=existingDishes.indexOf(si.dish)>=0;
+          var chkd=existingDishes.some(function(d){return d.trim()===si.dish.trim();});
           checkboxes+='<label style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:7px;cursor:pointer;'+(chkd?'background:rgba(0,102,255,.08)':'')+'" onclick="event.stopPropagation()">';
           checkboxes+='<input type="checkbox" name="dish_'+idx+'_'+si_i+'" value="'+esc(si.dish)+'" data-price="'+si.price+'" '+(chkd?'checked':'')+' onchange="onDishCheck('+idx+')" style="accent-color:#0066ff;width:14px;height:14px;flex-shrink:0"/>';
           checkboxes+='<span style="font-size:12px;flex:1">'+esc(si.dish)+'</span>';
@@ -1268,10 +1268,12 @@ function handleSubmit(e){
     sortedM.forEach(function(m,idx){
       var cb=document.querySelector('[data-mi="'+idx+'"]');
       if(cb&&cb.checked){
-        // Collect multi-checkbox dishes (dish_idx_0, dish_idx_1...)
+        // Collect multi-checkbox dishes via DOM (FormData skips unchecked)
       var selDishes=[];
-      for(var di=0;di<50;di++){var dcb=fd.get('dish_'+idx+'_'+di);if(dcb===null)break;selDishes.push(dcb);}
-      // Also try single dish input (manual mode)
+      document.querySelectorAll('[name^="dish_'+idx+'_"]').forEach(function(cb){
+        if(cb.checked)selDishes.push(cb.value);
+      });
+      // Fallback: single dish text input (manual mode / no shop)
       var singleDish=fd.get('dish_'+idx)||'';
       var dish=selDishes.length>0?selDishes.join(', '):singleDish;
       var price=parseInt(fd.get('price_'+idx))||0;
