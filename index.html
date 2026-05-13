@@ -1098,16 +1098,29 @@ function renderModal(){
       memberList+='<div class="flex-1 min-w-0"><p class="text-sm font-semibold">'+esc(m.en)+'</p><p class="text-xs text-txt3">'+esc(m.vn)+'</p></div></div>';
       memberList+='<div class="grid grid-cols-2 gap-2 mt-2'+(checked?'':' hidden')+'" id="mi-fields-'+idx+'">';
       var selShop=d.shop?shops.find(function(s){return s.id===d.shop}):null;
-      var dishField;
+      // Parse existing dishes (stored as comma-separated)
+      var existingDishes=(item&&item.dish)?item.dish.split(',').map(function(x){return x.trim();}):[];
       if(selShop&&selShop.items&&selShop.items.length){
-        dishField='<select name="dish_'+idx+'" onchange="onDishSelect('+idx+',this.value)" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm focus:ring-1 focus:ring-primary outline-none mt-0.5"><option value="">'+t('selectDish')+'</option>';
-        selShop.items.forEach(function(si){dishField+='<option value="'+esc(si.dish)+'" data-price="'+si.price+'"'+(item&&item.dish===si.dish?' selected':'')+'>'+esc(si.dish)+' ('+fmtK(si.price)+')</option>';});
-        dishField+='</select>';
+        // Multi-checkbox dish selector
+        var checkboxes='';
+        selShop.items.forEach(function(si,si_i){
+          var chkd=existingDishes.indexOf(si.dish)>=0;
+          checkboxes+='<label style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:7px;cursor:pointer;'+(chkd?'background:rgba(0,102,255,.08)':'')+'" onclick="event.stopPropagation()">';
+          checkboxes+='<input type="checkbox" name="dish_'+idx+'_'+si_i+'" value="'+esc(si.dish)+'" data-price="'+si.price+'" '+(chkd?'checked':'')+' onchange="onDishCheck('+idx+')" style="accent-color:#0066ff;width:14px;height:14px;flex-shrink:0"/>';
+          checkboxes+='<span style="font-size:12px;flex:1">'+esc(si.dish)+'</span>';
+          checkboxes+='<span style="font-size:11px;color:#0066ff;font-weight:600">'+fmtK(si.price)+'</span>';
+          checkboxes+='</label>';
+        });
+        memberList+='<div class="col-span-2"><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('dish')+'</label>';
+        memberList+='<div style="border:1px solid #e5e7eb;border-radius:10px;padding:4px;margin-top:2px">'+checkboxes+'</div>';
+        memberList+='<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 2px">';
+        memberList+='<span style="font-size:10px;color:#737373">Total:</span>';
+        memberList+='<div class="relative" style="width:120px"><input name="price_'+idx+'" id="price_'+idx+'" type="number" inputmode="numeric" value="'+(item?item.price:'')+'" placeholder="0" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right focus:ring-1 focus:ring-primary outline-none" style="padding-right:20px"/><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:#737373">&#273;</span></div>';
+        memberList+='</div></div>';
       }else{
-        dishField='<input name="dish_'+idx+'" value="'+esc(item?item.dish:'')+'" placeholder="Ph\u1edf b\u00f2..." class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm focus:ring-1 focus:ring-primary outline-none mt-0.5"/>';
+        memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('dish')+'</label><input name="dish_'+idx+'" value="'+esc(item?item.dish:'')+'" placeholder="Ph\u1edf b\u00f2..." class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm focus:ring-1 focus:ring-primary outline-none mt-0.5"/></div>';
+        memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('price')+'</label><div class="relative"><input name="price_'+idx+'" type="number" inputmode="numeric" value="'+(item?item.price:'')+'" placeholder="0" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right focus:ring-1 focus:ring-primary outline-none mt-0.5"/><span class="absolute right-2 top-1/2 text-[11px] text-txt3">&#273;</span></div></div>';
       }
-      memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('dish')+'</label>'+dishField+'</div>';
-      memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('price')+'</label><div class="relative"><input name="price_'+idx+'" type="number" inputmode="numeric" value="'+(item?item.price:'')+'" placeholder="0" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right focus:ring-1 focus:ring-primary outline-none mt-0.5"/><span class="absolute right-2 top-1/2 text-[11px] text-txt3">&#273;</span></div></div>';
       memberList+='</div></div>';
     });
 
@@ -1255,7 +1268,13 @@ function handleSubmit(e){
     sortedM.forEach(function(m,idx){
       var cb=document.querySelector('[data-mi="'+idx+'"]');
       if(cb&&cb.checked){
-        var dish=fd.get('dish_'+idx)||'';var price=parseInt(fd.get('price_'+idx))||0;
+        // Collect multi-checkbox dishes (dish_idx_0, dish_idx_1...)
+      var selDishes=[];
+      for(var di=0;di<50;di++){var dcb=fd.get('dish_'+idx+'_'+di);if(dcb===null)break;selDishes.push(dcb);}
+      // Also try single dish input (manual mode)
+      var singleDish=fd.get('dish_'+idx)||'';
+      var dish=selDishes.length>0?selDishes.join(', '):singleDish;
+      var price=parseInt(fd.get('price_'+idx))||0;
         items.push({en:m.en,dish:dish,price:price});
       }
     });
@@ -1300,16 +1319,14 @@ function onShopChange(shopId){
   else if(modal)modal.data={shop:shopId};
   renderModal();
 }
-function onDishSelect(idx,dish){
-  var shopId=document.getElementById('shopSelect');
-  if(!shopId)return;
-  var shop=shops.find(function(s){return s.id===shopId.value;});
-  if(!shop||!shop.items)return;
-  var item=shop.items.find(function(i){return i.dish===dish;});
-  if(item){
-    var priceInput=document.querySelector('[name="price_'+idx+'"]');
-    if(priceInput)priceInput.value=item.price;
-  }
+function onDishCheck(idx){
+  // Sum prices of all checked dishes for this member
+  var total=0;
+  document.querySelectorAll('[name^="dish_'+idx+'_"]').forEach(function(cb){
+    if(cb.checked)total+=parseInt(cb.getAttribute('data-price'))||0;
+  });
+  var priceInput=document.getElementById('price_'+idx);
+  if(priceInput)priceInput.value=total||'';
 }
 function updateMemberCount(){
   var cnt=document.querySelectorAll('[data-mi]:checked').length;
