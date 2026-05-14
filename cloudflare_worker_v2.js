@@ -390,47 +390,58 @@ export default {
           return { en: f.en?.stringValue || "", vn: f.vn?.stringValue || "" };
         });
 
-        // ═══ CLEAN bank metadata BEFORE name matching ═══
-        // Only match names from user-written content, NOT bank sender metadata
-        let cleanSearch = (content + " " + desc);
-        // Strip MBVCB transaction refs: MBVCB.14200348783.6133BFTVG2D84F5A
-        cleanSearch = cleanSearch.replace(/mbvcb[\d.]+[a-z0-9]*/gi, " ");
-        // Strip "SENDER_NAME chuyen tien" — bank account holder name + keyword
-        cleanSearch = cleanSearch.replace(/[a-z\s]{3,30}\s+chuyen\s*tien/gi, " ");
-        // Strip "CT tu ACCOUNT SENDER toi ACCOUNT RECEIVER tai BANK"
-        cleanSearch = cleanSearch.replace(/ct\s+tu[\s\S]*?(tai\s+[a-z]+bank[a-z]*|$)/gi, " ");
-        // Strip bank names
-        cleanSearch = cleanSearch.replace(/\b(tpbank|vpbank|mbbank|acb|vcb|bidv|techcombank|vietcombank|agribank|sacombank)\b/gi, " ");
-        // Strip long digit sequences (account numbers)
-        cleanSearch = cleanSearch.replace(/\d{6,}/g, " ");
-        cleanSearch = cleanSearch.replace(/\s+/g, " ").trim();
-
-        // Match member ONLY on cleaned user-written text
+        // ═══ RULE 1: MBVCB sender name extraction ═══
+        // Format: MBVCB.digits.alphanum.SENDER_NAME chuyen tien.CT tu ...
         let matched = null;
-        // Try exact EN name first (e.g. "parker", "currie", "nero")
-        for (const m of members) {
-          if (m.en && cleanSearch.includes(m.en.toLowerCase())) { matched = m; break; }
-        }
-        // Try VN name (e.g. "hung", "cuong")
-        if (!matched) {
+        const rawText = (content + " " + desc).toLowerCase();
+        const mbvcbMatch = rawText.match(/mbvcb[\d.]+[a-z0-9]+\.([a-z\s]+?)\s+chuyen\s*tien/i);
+        if (mbvcbMatch) {
+          const senderName = mbvcbMatch[1].trim().toLowerCase();
           for (const m of members) {
-            if (m.vn && m.vn.length >= 2 && cleanSearch.includes(m.vn.toLowerCase())) { matched = m; break; }
+            if (m.en && senderName.includes(m.en.toLowerCase())) { matched = m; break; }
+          }
+          if (!matched) {
+            for (const m of members) {
+              if (m.vn && m.vn.length >= 2 && senderName.includes(m.vn.toLowerCase())) { matched = m; break; }
+            }
+          }
+          if (!matched) {
+            const parts = senderName.split(/\s+/);
+            const givenName = parts[parts.length - 1];
+            const senderMap = {
+              "vu":"Vin","viet":"Victor","hoa":"Malie","nhi":"Emily",
+              "duc":"Gerard","hung":"Parker","duong":"Duke","cuong":"Currie",
+              "tuyet":"Gracie","khanh":"Jimmy","khai":"Warren","dash":"Dash"
+            };
+            if (senderMap[givenName]) matched = members.find(m => m.en === senderMap[givenName]);
           }
         }
-        // Try nickname map — only single unambiguous keywords from user note
-        if (!matched && cleanSearch.length > 0) {
-          const nameMap = {
-            "hoa": "Malie", "nhi": "Emily", "uyen nhi": "Emily",
-            "duc": "Gerard", "hung": "Parker", "duong": "Duke",
-            "cuong": "Currie", "tuyet": "Gracie",
-            "vu": "Vin", "viet": "Victor", "khanh": "Jimmy", "dash": "Dash"
-          };
-          // NOTE: removed "nguyen"→Nero from nameMap — too ambiguous (common VN surname)
-          // Nero must write "nero" or "nguyen" explicitly in their own note
-          for (const [key, en] of Object.entries(nameMap)) {
-            if (cleanSearch.includes(key)) {
-              matched = members.find(m => m.en === en);
-              if (matched) break;
+
+        // ═══ RULE 2: User-written content matching ═══
+        if (!matched) {
+          let cleanSearch = (content + " " + desc);
+          cleanSearch = cleanSearch.replace(/mbvcb[\d.]+[a-z0-9]*/gi, " ");
+          cleanSearch = cleanSearch.replace(/[a-z\s]{3,30}\s+chuyen\s*tien/gi, " ");
+          cleanSearch = cleanSearch.replace(/ct\s+tu[\s\S]*?(tai\s+[a-z]+bank[a-z]*|$)/gi, " ");
+          cleanSearch = cleanSearch.replace(/\b(tpbank|vpbank|mbbank|acb|vcb|bidv|techcombank|vietcombank|agribank|sacombank)\b/gi, " ");
+          cleanSearch = cleanSearch.replace(/\d{6,}/g, " ");
+          cleanSearch = cleanSearch.replace(/\s+/g, " ").trim();
+          for (const m of members) {
+            if (m.en && cleanSearch.includes(m.en.toLowerCase())) { matched = m; break; }
+          }
+          if (!matched) {
+            for (const m of members) {
+              if (m.vn && m.vn.length >= 2 && cleanSearch.includes(m.vn.toLowerCase())) { matched = m; break; }
+            }
+          }
+          if (!matched && cleanSearch.length > 0) {
+            const nameMap = {
+              "hoa":"Malie","nhi":"Emily","uyen nhi":"Emily","duc":"Gerard",
+              "hung":"Parker","duong":"Duke","cuong":"Currie","tuyet":"Gracie",
+              "vu":"Vin","viet":"Victor","khanh":"Jimmy","khai":"Warren","dash":"Dash"
+            };
+            for (const [key, en] of Object.entries(nameMap)) {
+              if (cleanSearch.includes(key)) { matched = members.find(m => m.en === en); if (matched) break; }
             }
           }
         }
