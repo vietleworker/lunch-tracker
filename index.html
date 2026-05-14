@@ -384,7 +384,7 @@ function calcMemberStats(){
       totalPaid:bal.totalPaid,totalOwed:bal.totalOwed,
       unpaidDates:bal.unpaidDates,
       daysEaten:daysEaten,totalBillDays:totalBillDays,
-      avgMeal:avgMeal,avgSpeed:avgSpeed,
+      avgMeal:avgMeal,avgSpeed:avgSpeed,weekHistory:weekHistory,
       favDish:favDish,favCount:favCount,
       payCount:myPayments.length
     };
@@ -447,7 +447,25 @@ function renderOverview(){
 
     // Stars
     var stars='';
-    for(var i=1;i<=5;i++)stars+=(i<=s.avgSpeed?'<span style="color:#d97706">\u2605</span>':'<span style="color:#e5e7eb">\u2605</span>');
+    for(var i=1;i<=5;i++){
+      var filled=s.avgSpeed>=i?1:(s.avgSpeed>=i-0.5?0.5:0);
+      if(filled===1)stars+='<span style="color:#d97706">\u2605</span>';
+      else if(filled===0.5)stars+='<span style="color:#d97706;opacity:.5">\u2605</span>';
+      else stars+='<span style="color:#e5e7eb">\u2605</span>';
+    }
+    // Build history tooltip rows
+    var histRows='<div style="font-size:10px;color:#737373;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px">score = max(0.5, 5 - delay days)<br>unpaid = delay counts up to today</div>';
+    var histList=s.weekHistory||[];
+    histList.forEach(function(wk,wi){
+      var prev=histList[wi+1];
+      var trend=prev?(wk.avg>prev.avg?'<span style="color:#059669">\u2191</span>':wk.avg<prev.avg?'<span style="color:#dc2626">\u2193</span>':'<span style="color:#737373">\u2192</span>'):'';
+      var bar='';for(var i=1;i<=5;i++)bar+=(i<=Math.round(wk.avg)?'\u2605':'\u2606');
+      histRows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;'+(wi===0?'font-weight:700':'')+'">';
+      histRows+='<span>'+wk.label+'<span style="font-size:9px;color:#aaa;margin-left:4px">('+wk.range+')</span></span>';
+      histRows+='<span style="display:flex;align-items:center;gap:4px"><span style="color:#d97706;letter-spacing:-1px">'+bar+'</span><span style="font-size:10px;color:#525252">'+wk.avg+'</span>'+trend+'</span>';
+      histRows+='</div>';
+    });
+    if(!histList.length)histRows+='<div style="color:#aaa;font-size:11px">No data yet</div>';
 
     cardsHtml+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-4 flex flex-col gap-3">';
     // Header: avatar + name + badges + balance
@@ -466,7 +484,7 @@ function renderOverview(){
     // Stats row
     cardsHtml+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;border-top:1px solid #f0f0f0;padding-top:10px;text-align:center">';
     cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Avg meal</div><div class="text-sm font-bold">'+(s.avgMeal>0?fmtK(s.avgMeal):'--')+'</div><div class="tipbox">Average price per meal from bill items</div></div>';
-    cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Pay speed</div><div style="font-size:12px;letter-spacing:-1px">'+(s.avgSpeed>0?stars:'--')+'</div><div class="tipbox">Same day=5\u2605 Next day=4\u2605 +2d=3\u2605 +3d=2\u2605 4d+=1\u2605 (last 10 paid meals)</div></div>';
+    cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Pay speed</div><div style="display:flex;align-items:baseline;gap:3px"><div style="font-size:12px;letter-spacing:-1px">'+(s.avgSpeed>0?stars:'--')+'</div>'+(s.avgSpeed>0?'<span style="font-size:9px;color:#d97706;font-weight:700">('+s.avgSpeed+')</span>':'')+'</div><div class="tipbox" style="width:240px;padding:10px"><div style="font-weight:700;font-size:12px;margin-bottom:6px">Pay Speed History</div>'+histRows+'</div></div>';
     cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Attendance</div><div class="text-sm font-bold">'+s.daysEaten+'/'+s.totalBillDays+'</div><div class="tipbox">Days eaten / total bill days this week</div></div>';
     cardsHtml+='</div>';
 
