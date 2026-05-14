@@ -1115,11 +1115,11 @@ function renderModal(){
         memberList+='<div style="border:1px solid #e5e7eb;border-radius:10px;padding:4px;margin-top:2px">'+checkboxes+'</div>';
         memberList+='<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;padding:0 2px">';
         memberList+='<span style="font-size:10px;color:#737373">Total:</span>';
-        memberList+='<div class="relative" style="width:120px"><input name="price_'+idx+'" id="price_'+idx+'" type="number" inputmode="numeric" value="'+(item?item.price:'')+'" placeholder="0" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right focus:ring-1 focus:ring-primary outline-none" style="padding-right:20px"/><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:#737373">&#273;</span></div>';
+        memberList+='<div class="relative" style="width:120px"><input name="price_'+idx+'" id="price_'+idx+'" type="number" inputmode="numeric" value="'+(item?item.price:'')+'" placeholder="0" oninput="updatePriceSummary()" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right focus:ring-1 focus:ring-primary outline-none" style="padding-right:20px"/><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:#737373">&#273;</span></div>';
         memberList+='</div></div>';
       }else{
         memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('dish')+'</label><input name="dish_'+idx+'" value="'+esc(item?item.dish:'')+'" placeholder="Ph\u1edf b\u00f2..." class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm focus:ring-1 focus:ring-primary outline-none mt-0.5"/></div>';
-        memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('price')+'</label><div class="relative"><input name="price_'+idx+'" type="number" inputmode="numeric" value="'+(item?item.price:'')+'" placeholder="0" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right focus:ring-1 focus:ring-primary outline-none mt-0.5"/><span class="absolute right-2 top-1/2 text-[11px] text-txt3">&#273;</span></div></div>';
+        memberList+='<div><label class="text-[10px] font-bold text-txt3 uppercase tracking-wider">'+t('price')+'</label><div class="relative"><input name="price_'+idx+'" type="number" inputmode="numeric" value="'+(item?item.price:'')+'" placeholder="0" oninput="updatePriceSummary()" class="w-full bg-surface-white border border-outline-v/50 rounded-lg py-1.5 px-2 text-sm text-right focus:ring-1 focus:ring-primary outline-none mt-0.5"/><span class="absolute right-2 top-1/2 text-[11px] text-txt3">&#273;</span></div></div>';
       }
       memberList+='</div></div>';
     });
@@ -1131,7 +1131,18 @@ function renderModal(){
     '</div></div></div>'+
     '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('note')+'</label><textarea name="note" placeholder="Com Ga Xe x4..." class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none resize-y min-h-[60px]">'+esc(d.note||'')+'</textarea></div>'+
     '<div class="mb-4"><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('selectShop')+'</label><select name="shop" id="shopSelect" onchange="onShopChange(this.value)" class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"><option value="">'+t('noShop')+'</option>'+shops.map(function(s){return '<option value="'+esc(s.id)+'"'+(d.shop===s.id?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div>'+
-    '<div><div class="flex justify-between items-center mb-2"><label class="text-label font-bold text-txt3 uppercase tracking-wider">'+t('orderDetails')+'</label><div class="flex items-center gap-3"><label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="selectAllMembers" onchange="toggleAllMembers(this.checked)" class="rounded border-outline-v text-primary focus:ring-primary h-4 w-4"/><span class="text-xs text-txt3">'+t('selectAll')+'</span></label><span class="bg-surface-high px-2 py-0.5 rounded-full text-label text-primary" id="memberCount">0</span></div></div><div class="space-y-2" id="memberItems">'+memberList+'</div></div>'+
+    '<div><div class="flex justify-between items-center mb-2"><label class="text-label font-bold text-txt3 uppercase tracking-wider">'+t('orderDetails')+'</label><div class="flex items-center gap-3"><label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="selectAllMembers" onchange="toggleAllMembers(this.checked)" class="rounded border-outline-v text-primary focus:ring-primary h-4 w-4"/><span class="text-xs text-txt3">'+t('selectAll')+'</span></label><span class="bg-surface-high px-2 py-0.5 rounded-full text-label text-primary" id="memberCount">0</span></div></div>'+
+    '<div id="priceSummaryBar" style="background:#f8f9fc;border-radius:10px;padding:8px 12px;margin-bottom:8px;display:none">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+    '<span style="font-size:11px;font-weight:700;color:#737373;text-transform:uppercase;letter-spacing:.4px">Price check</span>'+
+    '<span id="priceMatchBadge" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px"></span>'+
+    '</div>'+
+    '<div id="priceSummaryRows" style="font-size:12px"></div>'+
+    '<div style="border-top:1px solid #e5e7eb;margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;align-items:center">'+
+    '<span style="font-size:11px;color:#737373">Sum of items</span>'+
+    '<span id="priceSumTotal" style="font-weight:700;font-size:13px">0</span>'+
+    '</div></div>'+
+    '<div class="space-y-2" id="memberItems">'+memberList+'</div></div>'+
     '<div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('photo')+'</label>'+photoHtml+'</div></div>';
   }else{
     form='<div class="space-y-4"><div><label class="text-label font-bold text-txt3 uppercase tracking-wider block mb-1">'+t('person')+'</label><select name="member" required class="w-full bg-surface-low border border-outline-v/50 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"><option value="">'+t('select')+'</option>'+memberOpts+'</select></div>'+
@@ -1329,11 +1340,58 @@ function onDishCheck(idx){
   });
   var priceInput=document.getElementById('price_'+idx);
   if(priceInput)priceInput.value=total||'';
+  updatePriceSummary();
 }
 function updateMemberCount(){
   var cnt=document.querySelectorAll('[data-mi]:checked').length;
   var el=document.getElementById('memberCount');
   if(el)el.textContent=cnt+' '+t('people');
+  updatePriceSummary();
+}
+function updatePriceSummary(){
+  var bar=document.getElementById('priceSummaryBar');
+  var rowsEl=document.getElementById('priceSummaryRows');
+  var sumEl=document.getElementById('priceSumTotal');
+  var badge=document.getElementById('priceMatchBadge');
+  if(!bar||!rowsEl||!sumEl)return;
+  var totalInput=document.querySelector('[name="total"]');
+  var billTotal=totalInput?parseInt(totalInput.value)||0:0;
+  var cbs=document.querySelectorAll('[data-mi]');
+  var rows=[],sum=0;
+  cbs.forEach(function(cb,idx){
+    if(!cb.checked)return;
+    var card=document.getElementById('mi-'+idx);
+    if(!card)return;
+    var nameEl=card.querySelector('p.text-sm');
+    var priceInput=card.querySelector('[name^="price_"]');
+    var price=priceInput?parseInt(priceInput.value)||0:0;
+    var name=nameEl?nameEl.textContent:'?';
+    sum+=price;
+    rows.push({name:name,price:price});
+  });
+  if(rows.length===0){bar.style.display='none';return;}
+  bar.style.display='block';
+  var html='';
+  rows.forEach(function(r){
+    html+='<div style="display:flex;justify-content:space-between;padding:1px 0;color:#525252">'+
+    '<span>'+esc(r.name)+'</span>'+
+    '<span style="font-weight:600">'+Math.round(r.price/1000)+'k</span></div>';
+  });
+  rowsEl.innerHTML=html;
+  sumEl.textContent=Math.round(sum/1000)+'k';
+  if(billTotal>0){
+    var diff=sum-billTotal;
+    if(diff===0){
+      sumEl.style.color='#059669';
+      badge.textContent='✓ Matches bill total';badge.style.background='#ecfdf5';badge.style.color='#065f46';
+    }else{
+      sumEl.style.color='#dc2626';
+      var sign=diff>0?'+':'';
+      badge.textContent=sign+Math.round(diff/1000)+'k vs bill';badge.style.background='#fef2f2';badge.style.color='#dc2626';
+    }
+  }else{
+    sumEl.style.color='#0066ff';badge.textContent='';
+  }
 }
 
 /* ── REALTIME ── */
