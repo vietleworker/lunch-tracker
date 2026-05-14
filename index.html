@@ -237,7 +237,7 @@ function paymentsForBill(bill){
 
 function getWeekKey(dateStr){
   try{var d=dateStr&&dateStr.match(/^\d{4}-\d{2}-\d{2}$/)?new Date(dateStr+'T12:00:00'):new Date(dateStr);if(isNaN(d))return'other';
-  var now=new Date();var startOfWeek=new Date(now);startOfWeek.setDate(now.getDate()-now.getDay());startOfWeek.setHours(0,0,0,0);
+  var now=new Date();var startOfWeek=new Date(now);startOfWeek.setDate(now.getDate()-((now.getDay()+6)%7));startOfWeek.setHours(0,0,0,0);
   var endOfWeek=new Date(startOfWeek);endOfWeek.setDate(startOfWeek.getDate()+7);
   var lastWeekStart=new Date(startOfWeek);lastWeekStart.setDate(startOfWeek.getDate()-7);
   if(d>=startOfWeek&&d<endOfWeek)return'thisWeek';
@@ -329,7 +329,7 @@ function calcMemberStats(){
   var totalBillDays=thisWeekBills.length;
   var balances=calcMemberBalances();
   // startOfWeek scoped here for weekly history calculation
-  var _now=new Date();var startOfWeek=new Date(_now);startOfWeek.setDate(_now.getDate()-_now.getDay());startOfWeek.setHours(0,0,0,0);
+  var _now=new Date();var startOfWeek=new Date(_now);startOfWeek.setDate(_now.getDate()-((_now.getDay()+6)%7));startOfWeek.setHours(0,0,0,0);
 
   members.forEach(function(m){
     var en=m.en;
