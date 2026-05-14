@@ -354,31 +354,50 @@ function calcMemberStats(){
     var favDish='',favCount=0;
     Object.keys(dishCount).forEach(function(d){if(dishCount[d]>favCount){favCount=dishCount[d];favDish=d;}});
 
-    // Speed: score ALL bills where member ate AND has a matching payment
-    // Use all bills (not just this week) to have enough data
-    var speedScores=[];
-    bills.forEach(function(b){
-      var items=b.items||[];
-      if(!items.some(function(it){return it.en===en;}))return;
+    // ── Speed formula: score = max(0.5, 5 - delayDays)
+    //    paid   → delay = payDate - billDate
+    //    unpaid → delay = today - billDate (counts up)
+    function calcBillScore(b,myPays){
       var billNorm=normDate(b.date);
-      // Match payment: billId first, then by date
-      var matchPay=myPayments.find(function(p){
+      var billD=new Date(billNorm+'T12:00:00');
+      var pay=myPays.find(function(p){
         if(p.billId)return p.billId===b.id;
         return normDate(p.covers||p.date)===billNorm;
       });
-      if(!matchPay)return; // unpaid — no score yet
-      var billD=new Date(billNorm+'T12:00:00');
-      var payD=matchPay.createdAt?(matchPay.createdAt.toDate?matchPay.createdAt.toDate():new Date(matchPay.createdAt)):billD;
-      var diffDays=Math.max(0,Math.round((payD-billD)/(1000*60*60*24)));
-      if(diffDays<=0)speedScores.push(5);      // same day
-      else if(diffDays<=1)speedScores.push(4); // +1 day
-      else if(diffDays<=2)speedScores.push(3); // +2 days
-      else if(diffDays<=3)speedScores.push(2); // +3 days
-      else speedScores.push(1);               // 4+ days
+      var refD=pay?(pay.createdAt?(pay.createdAt.toDate?pay.createdAt.toDate():new Date(pay.createdAt)):billD):new Date();
+      var delay=Math.max(0,Math.round((refD-billD)/(1000*60*60*24)));
+      return Math.max(0.5,5-delay);
+    }
+
+    // This week average
+    var weekScores=[];
+    thisWeekBills.forEach(function(b){
+      if(!(b.items||[]).some(function(it){return it.en===en;}))return;
+      weekScores.push(calcBillScore(b,myPayments));
     });
-    // Use last 10 paid bills for rolling average (not all-time skewed by old data)
-    var recentScores=speedScores.slice(-10);
-    var avgSpeed=recentScores.length?Math.round(recentScores.reduce(function(s,v){return s+v;},0)/recentScores.length):0;
+    var avgSpeed=weekScores.length?Math.round(weekScores.reduce(function(s,v){return s+v;},0)/weekScores.length*10)/10:0;
+
+    // 4-week history
+    var weekHistory=[];
+    for(var wk=0;wk<4;wk++){
+      var wStart=new Date(startOfWeek);wStart.setDate(startOfWeek.getDate()-7*wk);
+      var wEnd=new Date(wStart);wEnd.setDate(wStart.getDate()+7);
+      var wScores=[];
+      bills.forEach(function(b){
+        if(!(b.items||[]).some(function(it){return it.en===en;}))return;
+        var d=new Date(normDate(b.date)+'T12:00:00');
+        if(d<wStart||d>=wEnd)return;
+        wScores.push(calcBillScore(b,myPayments));
+      });
+      if(!wScores.length)continue;
+      var wAvg=Math.round(wScores.reduce(function(s,v){return s+v;},0)/wScores.length*10)/10;
+      var d1=wStart.getDate()+'/'+(wStart.getMonth()+1);
+      var d2=new Date(wEnd-1).getDate()+'/'+(new Date(wEnd-1).getMonth()+1);
+      weekHistory.push({
+        label:wk===0?'This week':wk===1?'Last week':wk+' weeks ago',
+        range:d1+' - '+d2,avg:wAvg,meals:wScores.length
+      });
+    }
 
     stats[en]={
       totalPaid:bal.totalPaid,totalOwed:bal.totalOwed,
