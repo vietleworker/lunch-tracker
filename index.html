@@ -354,24 +354,31 @@ function calcMemberStats(){
     var favDish='',favCount=0;
     Object.keys(dishCount).forEach(function(d){if(dishCount[d]>favCount){favCount=dishCount[d];favDish=d;}});
 
+    // Speed: score ALL bills where member ate AND has a matching payment
+    // Use all bills (not just this week) to have enough data
     var speedScores=[];
-    thisWeekBills.forEach(function(b){
+    bills.forEach(function(b){
       var items=b.items||[];
       if(!items.some(function(it){return it.en===en;}))return;
       var billNorm=normDate(b.date);
-      var matchPay=myPayments.find(function(p){return normDate(p.covers||p.date)===billNorm;});
-      if(matchPay){
-        var billD=new Date(billNorm+'T12:00:00');
-        var payD=matchPay.createdAt?(matchPay.createdAt.toDate?matchPay.createdAt.toDate():new Date(matchPay.createdAt)):billD;
-        var diffDays=Math.max(0,Math.round((payD-billD)/(1000*60*60*24)));
-        if(diffDays<=0)speedScores.push(5);
-        else if(diffDays<=1)speedScores.push(4);
-        else if(diffDays<=2)speedScores.push(3);
-        else if(diffDays<=3)speedScores.push(2);
-        else speedScores.push(1);
-      }
+      // Match payment: billId first, then by date
+      var matchPay=myPayments.find(function(p){
+        if(p.billId)return p.billId===b.id;
+        return normDate(p.covers||p.date)===billNorm;
+      });
+      if(!matchPay)return; // unpaid — no score yet
+      var billD=new Date(billNorm+'T12:00:00');
+      var payD=matchPay.createdAt?(matchPay.createdAt.toDate?matchPay.createdAt.toDate():new Date(matchPay.createdAt)):billD;
+      var diffDays=Math.max(0,Math.round((payD-billD)/(1000*60*60*24)));
+      if(diffDays<=0)speedScores.push(5);      // same day
+      else if(diffDays<=1)speedScores.push(4); // +1 day
+      else if(diffDays<=2)speedScores.push(3); // +2 days
+      else if(diffDays<=3)speedScores.push(2); // +3 days
+      else speedScores.push(1);               // 4+ days
     });
-    var avgSpeed=speedScores.length?Math.round(speedScores.reduce(function(s,v){return s+v;},0)/speedScores.length):0;
+    // Use last 10 paid bills for rolling average (not all-time skewed by old data)
+    var recentScores=speedScores.slice(-10);
+    var avgSpeed=recentScores.length?Math.round(recentScores.reduce(function(s,v){return s+v;},0)/recentScores.length):0;
 
     stats[en]={
       totalPaid:bal.totalPaid,totalOwed:bal.totalOwed,
@@ -459,7 +466,7 @@ function renderOverview(){
     // Stats row
     cardsHtml+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;border-top:1px solid #f0f0f0;padding-top:10px;text-align:center">';
     cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Avg meal</div><div class="text-sm font-bold">'+(s.avgMeal>0?fmtK(s.avgMeal):'--')+'</div><div class="tipbox">Average price per meal from bill items</div></div>';
-    cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Pay speed</div><div style="font-size:12px;letter-spacing:-1px">'+(s.avgSpeed>0?stars:'--')+'</div><div class="tipbox">Same day=5\u2605 +1d=4\u2605 +2d=3\u2605 +3d=2\u2605 later=1\u2605</div></div>';
+    cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Pay speed</div><div style="font-size:12px;letter-spacing:-1px">'+(s.avgSpeed>0?stars:'--')+'</div><div class="tipbox">Same day=5\u2605 Next day=4\u2605 +2d=3\u2605 +3d=2\u2605 4d+=1\u2605 (last 10 paid meals)</div></div>';
     cardsHtml+='<div class="tip"><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Attendance</div><div class="text-sm font-bold">'+s.daysEaten+'/'+s.totalBillDays+'</div><div class="tipbox">Days eaten / total bill days this week</div></div>';
     cardsHtml+='</div>';
 
