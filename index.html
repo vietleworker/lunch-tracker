@@ -328,6 +328,8 @@ function calcMemberStats(){
   var thisWeekBills=bills.filter(function(b){return getWeekKey(b.date)==='thisWeek';});
   var totalBillDays=thisWeekBills.length;
   var balances=calcMemberBalances();
+  // startOfWeek scoped here for weekly history calculation
+  var _now=new Date();var startOfWeek=new Date(_now);startOfWeek.setDate(_now.getDate()-_now.getDay());startOfWeek.setHours(0,0,0,0);
 
   members.forEach(function(m){
     var en=m.en;
