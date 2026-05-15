@@ -513,7 +513,10 @@ function renderOverview(){
     if(hasUnpaid){
       var unpaidRows=s.unpaidDates.map(function(u){return(u.date||u)+' <b>'+fmtK(u.amount||0)+'</b>';}).join(' &middot; ');
       var tplParts=s.unpaidDates.map(function(u){
-        var d=new Date((u.date||u)+' 2026');var day=isNaN(d.getTime())?(u.date||u):d.getDate();
+        var ds=(u.date||u)+'';
+        // Parse "11 May" or "11 May 2026" → get day number
+        var dayMatch=ds.match(/^(\d+)/);
+        var day=dayMatch?dayMatch[1]:ds;
         return Math.round((u.amount||0)/1000)+' '+day;
       }).join(', ');
       var copyTpl=s.en+' '+tplParts;
