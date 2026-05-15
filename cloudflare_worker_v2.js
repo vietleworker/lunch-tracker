@@ -525,6 +525,62 @@ export default {
           }), { headers: H });
         }
 
+        // ═══ MULTI-DAY PARSER ═══
+        // Format: "Malie 32 11, 35 12, 35 13" → multiple payments
+        // Pattern: NAME (amount day, amount day, ...)
+        const multiDayRegex = /\b(\d+)\s+(\d{1,2})\b/g;
+        const multiPairs = [];
+        let mdMatch;
+        const rawForMulti = (content + " " + desc).toLowerCase();
+        // Only try multi-day if matched member and content has comma-separated pairs
+        if (matched && (content + desc).includes(',')) {
+          while ((mdMatch = multiDayRegex.exec(rawForMulti)) !== null) {
+            const amt = parseInt(mdMatch[1]);
+            const day = parseInt(mdMatch[2]);
+            if (amt >= 5 && amt <= 500 && day >= 1 && day <= 31) {
+              multiPairs.push({ amount: amt * 1000, day });
+            }
+          }
+        }
+
+        if (matched && multiPairs.length >= 2) {
+          // Multi-day payment: create one payment record per day
+          const txDx = new Date(txDate.replace(" ", "T"));
+          const monthsx = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          const txYearx = txDx.getFullYear();
+          const txMonthx = txDx.getMonth();
+          const todayStrx = txDx.getDate().toString().padStart(2,"0") + " " + monthsx[txDx.getMonth()] + " " + txYearx;
+          const created = [];
+          for (const pair of multiPairs) {
+            const dd = String(pair.day).padStart(2,"0");
+            const coversStr = dd + " " + monthsx[txMonthx] + " " + txYearx;
+            const pPayload = {
+              fields: {
+                en: { stringValue: matched.en },
+                vn: { stringValue: matched.vn },
+                amount: { integerValue: String(pair.amount) },
+                covers: { stringValue: coversStr },
+                date: { stringValue: todayStrx },
+                method: { stringValue: "Bank Transfer" },
+                source: { stringValue: "sepay_webhook_multi" },
+                sepayId: { integerValue: String(txId) },
+                refCode: { stringValue: refCode },
+                rawContent: { stringValue: (content || "").substring(0, 200) },
+                createdAt: { timestampValue: new Date().toISOString() }
+              }
+            };
+            await fetch(`${FSURL}/payments`, {
+              method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify(pPayload)
+            });
+            created.push(coversStr + " " + pair.amount/1000 + "k");
+          }
+          return new Response(JSON.stringify({
+            success: true, matched: true, multiDay: true,
+            member: matched.en, payments: created, sepayId: txId
+          }), { headers: H });
+        }
+
         // ═══ SIMPLE PARSER: 1 transfer = 1 payment ═══
         // Only extract the COVERS DAY from content. Amount = transferAmount always.
         const txD = new Date(txDate.replace(" ", "T"));
