@@ -533,7 +533,7 @@ export default {
         let mdMatch;
         const rawForMulti = (content + " " + desc).toLowerCase();
         // Only try multi-day if matched member and content has comma-separated pairs
-        if (matched && (content + desc).includes(',')) {
+        if (matched) {
           while ((mdMatch = multiDayRegex.exec(rawForMulti)) !== null) {
             const amt = parseInt(mdMatch[1]);
             const day = parseInt(mdMatch[2]);
