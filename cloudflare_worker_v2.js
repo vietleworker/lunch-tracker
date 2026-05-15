@@ -419,7 +419,7 @@ export default {
         // ═══ RULE 1.5: Plain "SENDER_NAME Chuyen tien" (no MBVCB prefix) ═══
         // e.g. "NGUYEN VUONG KHAI Chuyen tien"
         if (!matched) {
-          const plainMatch = rawText.match(/^([a-z\s]{5,40})\s+chuyen\s*tien/i);
+          const plainMatch = rawText.match(/^([a-z\s]{5,40})\s+(chuyen\s*tien|transfer)/i);
           if (plainMatch) {
             const sName = plainMatch[1].trim().toLowerCase();
             // Step 1: EN name
