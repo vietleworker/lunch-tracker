@@ -417,6 +417,33 @@ export default {
           }
         }
 
+        // ═══ RULE 1.5: Plain "SENDER_NAME Chuyen tien" (no MBVCB prefix) ═══
+        // e.g. "NGUYEN VUONG KHAI Chuyen tien"
+        if (!matched) {
+          const plainMatch = rawText.match(/^([a-z\s]{5,40})\s+chuyen\s*tien/i);
+          if (plainMatch) {
+            const sName = plainMatch[1].trim().toLowerCase();
+            for (const m of members) {
+              if (m.en && sName.includes(m.en.toLowerCase())) { matched = m; break; }
+            }
+            if (!matched) {
+              for (const m of members) {
+                if (m.vn && m.vn.length >= 2 && sName.includes(m.vn.toLowerCase())) { matched = m; break; }
+              }
+            }
+            if (!matched) {
+              const sParts = sName.split(/\s+/);
+              const givenName = sParts[sParts.length - 1];
+              const sMap = {
+                "vu":"Vin","viet":"Victor","hoa":"Malie","nhi":"Emily",
+                "duc":"Gerard","hung":"Parker","duong":"Duke","cuong":"Currie",
+                "tuyet":"Gracie","khanh":"Jimmy","khai":"Warren","dash":"Dash"
+              };
+              if (sMap[givenName]) matched = members.find(m => m.en === sMap[givenName]);
+            }
+          }
+        }
+
         // ═══ RULE 2: User-written content matching ═══
         if (!matched) {
           let cleanSearch = (content + " " + desc);
