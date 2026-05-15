@@ -397,17 +397,16 @@ export default {
         const mbvcbMatch = rawText.match(/mbvcb[\d.]+[a-z0-9]+\.([a-z\s]+?)\s+chuyen\s*tien/i);
         if (mbvcbMatch) {
           const senderName = mbvcbMatch[1].trim().toLowerCase();
+          // Step 1: EN name in sender (e.g. user has EN name in bank account)
           for (const m of members) {
             if (m.en && senderName.includes(m.en.toLowerCase())) { matched = m; break; }
           }
-          if (!matched) {
-            for (const m of members) {
-              if (m.vn && m.vn.length >= 2 && senderName.includes(m.vn.toLowerCase())) { matched = m; break; }
-            }
-          }
+          // Step 2: given name (LAST word) → senderMap
+          // NOTE: Do NOT use VN substring match on full sender name
+          // "Nguyen" is Nero's VN name but also Vietnam's most common surname → false positives
           if (!matched) {
             const parts = senderName.split(/\s+/);
-            const givenName = parts[parts.length - 1];
+            const givenName = parts[parts.length - 1]; // Vietnamese: last word = given name
             const senderMap = {
               "vu":"Vin","viet":"Victor","hoa":"Malie","nhi":"Emily",
               "duc":"Gerard","hung":"Parker","duong":"Duke","cuong":"Currie",
@@ -423,14 +422,11 @@ export default {
           const plainMatch = rawText.match(/^([a-z\s]{5,40})\s+chuyen\s*tien/i);
           if (plainMatch) {
             const sName = plainMatch[1].trim().toLowerCase();
+            // Step 1: EN name
             for (const m of members) {
               if (m.en && sName.includes(m.en.toLowerCase())) { matched = m; break; }
             }
-            if (!matched) {
-              for (const m of members) {
-                if (m.vn && m.vn.length >= 2 && sName.includes(m.vn.toLowerCase())) { matched = m; break; }
-              }
-            }
+            // Step 2: given name (last word) → senderMap only (no VN substring match)
             if (!matched) {
               const sParts = sName.split(/\s+/);
               const givenName = sParts[sParts.length - 1];
