@@ -511,15 +511,19 @@ function renderOverview(){
 
     // Favorite dish or unpaid alert
     if(hasUnpaid){
-      var unpaidRows=s.unpaidDates.map(function(u){return(u.date||u)+' <b>'+fmtK(u.amount||0)+'</b>';}).join(' &nbsp;·&nbsp; ');
-      var copyTpl=s.en+' '+Math.round(s.totalOwed/1000)+'k';
+      var unpaidRows=s.unpaidDates.map(function(u){return(u.date||u)+' <b>'+fmtK(u.amount||0)+'</b>';}).join(' &middot; ');
+      var tplParts=s.unpaidDates.map(function(u){
+        var d=new Date((u.date||u)+' 2026');var day=isNaN(d.getTime())?(u.date||u):d.getDate();
+        return Math.round((u.amount||0)/1000)+' '+day;
+      }).join(', ');
+      var copyTpl=s.en+' '+tplParts;
       cardsHtml+='<div style="background:#fef2f2;border-radius:8px;padding:7px 10px;font-size:11px;color:#991b1b">';
       cardsHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
       cardsHtml+='<span><span class="mi" style="font-size:12px;vertical-align:middle">warning</span> <b>Owes '+fmtK(s.totalOwed)+'</b></span>';
-      cardsHtml+='<button onclick="copyTemplate(\'' +copyTpl+ '\')" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">📋 Copy</button>';
+      cardsHtml+='<button data-tpl="'+esc(copyTpl)+'" onclick="copyTemplate(this.getAttribute('+"'data-tpl'"+ '))" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">Copy</button>';
       cardsHtml+='</div>';
-      cardsHtml+='<div style="color:#991b1b">'+unpaidRows+'</div>';
-      cardsHtml+='<div style="margin-top:4px;font-size:10px;color:#b91c1c;font-style:italic">Template: <code style="background:#fee2e2;padding:1px 4px;border-radius:3px">'+copyTpl+'</code></div>';
+      cardsHtml+='<div style="color:#991b1b;margin-bottom:4px">'+unpaidRows+'</div>';
+      cardsHtml+='<div style="font-size:10px;color:#7f1d1d;background:#fee2e2;border-radius:4px;padding:3px 6px;word-break:break-all">'+esc(copyTpl)+'</div>';
       cardsHtml+='</div>';
     }else if(s.favDish){
       cardsHtml+='<div style="font-size:11px;color:#737373"><span class="mi" style="font-size:12px;color:#dc2626">favorite</span> '+esc(s.favDish)+' ('+s.favCount+'x)</div>';
@@ -1398,13 +1402,13 @@ function onDishCheck(idx){
   updatePriceSummary();
 }
 function copyTemplate(text){
+  if(!text)return;
   navigator.clipboard.writeText(text).then(function(){
-    // Show brief toast
     var t=document.createElement('div');
-    t.textContent='Copied: '+text;
-    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;transition:opacity .3s';
+    t.textContent='Copied!';
+    t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999';
     document.body.appendChild(t);
-    setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove()},300);},1800);
+    setTimeout(function(){t.remove();},1800);
   });
 }
 function updateMemberCount(){
