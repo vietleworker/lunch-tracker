@@ -449,22 +449,29 @@ export default {
           cleanSearch = cleanSearch.replace(/\b(tpbank|vpbank|mbbank|acb|vcb|bidv|techcombank|vietcombank|agribank|sacombank)\b/gi, " ");
           cleanSearch = cleanSearch.replace(/\d{6,}/g, " ");
           cleanSearch = cleanSearch.replace(/\s+/g, " ").trim();
+          // Step 1: EN name match (highest priority)
           for (const m of members) {
-            if (m.en && cleanSearch.includes(m.en.toLowerCase())) { matched = m; break; }
+            if (m.en && cleanSearch.toLowerCase().includes(m.en.toLowerCase())) { matched = m; break; }
           }
-          if (!matched) {
-            for (const m of members) {
-              if (m.vn && m.vn.length >= 2 && cleanSearch.includes(m.vn.toLowerCase())) { matched = m; break; }
-            }
-          }
+          // Step 2: given name keyword map (unambiguous VN given names)
           if (!matched && cleanSearch.length > 0) {
             const nameMap = {
-              "hoa":"Malie","nhi":"Emily","uyen nhi":"Emily","duc":"Gerard",
-              "hung":"Parker","duong":"Duke","cuong":"Currie","tuyet":"Gracie",
-              "vu":"Vin","viet":"Victor","khanh":"Jimmy","khai":"Warren","dash":"Dash"
+              "hoa":"Malie","nhi":"Emily","uyen nhi":"Emily","hung":"Parker",
+              "duong":"Duke","cuong":"Currie","tuyet":"Gracie",
+              "vu":"Vin","viet":"Victor","khanh":"Jimmy","khai":"Warren","dash":"Dash",
+              "duc":"Gerard"
+              // "nguyen" excluded: common surname, would match Nero for everyone
             };
             for (const [key, en] of Object.entries(nameMap)) {
-              if (cleanSearch.includes(key)) { matched = members.find(m => m.en === en); if (matched) break; }
+              if (cleanSearch.toLowerCase().includes(key)) { matched = members.find(m => m.en === en); if (matched) break; }
+            }
+          }
+          // Step 3: VN name substring (last resort, skip "Nguyen" as it's a surname)
+          if (!matched) {
+            const SKIP_VN = ["nguyen"]; // too common as surname
+            for (const m of members) {
+              if (m.vn && m.vn.length >= 3 && !SKIP_VN.includes(m.vn.toLowerCase())
+                  && cleanSearch.toLowerCase().includes(m.vn.toLowerCase())) { matched = m; break; }
             }
           }
         }
