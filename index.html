@@ -424,7 +424,13 @@ function getUnmatchedPayments(){
 }
 function renderOverview(){
   var totalB=bills.reduce(function(s,b){return s+(b.total||0)},0);
-  var totalP=payments.reduce(function(s,p){return s+(p.amount||0)},0);
+  // Only count payments that match a bill (by date or billId)
+  var billDates={};bills.forEach(function(b){billDates[normDate(b.date)]=b;});
+  var billIds={};bills.forEach(function(b){billIds[b.id]=b;});
+  var totalP=payments.reduce(function(s,p){
+    var matched=p.billId?billIds[p.billId]:billDates[normDate(p.covers||p.date)];
+    return s+(matched?p.amount||0:0);
+  },0);
   var out=totalB-totalP;
   var byP={};payments.forEach(function(p){byP[p.en]=(byP[p.en]||0)+(p.amount||0);});
   var topN='--',topA=0,topCnt=0;Object.keys(byP).forEach(function(k){if(byP[k]>topA){topA=byP[k];topN=k;topCnt=payments.filter(function(p){return p.en===k}).length;}});
