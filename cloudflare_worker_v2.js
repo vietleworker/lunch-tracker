@@ -525,14 +525,80 @@ export default {
           }), { headers: H });
         }
 
-        // ═══ MULTI-DAY PARSER ═══
-        // Format: "Malie 32 11, 35 12, 35 13" → multiple payments
-        // Pattern: NAME (amount day, amount day, ...)
+        // ═══ PARSER A: billNo format "Emily 11n30 12n35 13n38" ═══
+        // Pattern: (billNo)n(amountK) — each token = 1 payment linked to a specific bill
+        const billNTokens = [];
+        const rawForBillN = (content + " " + desc);
+        const billNRegex = /\b(\d{1,2})n(\d+)\b/gi;
+        let bnMatch;
+        if (matched) {
+          while ((bnMatch = billNRegex.exec(rawForBillN)) !== null) {
+            const billNo = parseInt(bnMatch[1]);
+            const amt    = parseInt(bnMatch[2]);
+            if (billNo >= 1 && amt >= 5 && amt <= 500) {
+              billNTokens.push({ billNo, amount: amt * 1000 });
+            }
+          }
+        }
+
+        if (matched && billNTokens.length >= 1) {
+          // Load bills to map billNo → covers date + billId
+          const bRes = await fetch(`${FSURL}/bills?pageSize=200`, { headers: { Authorization: `Bearer ${token}` } });
+          const bData = await bRes.json();
+          const billMap = {}; // billNo → { date, id }
+          for (const doc of (bData.documents || [])) {
+            const f = doc.fields || {};
+            const bn = parseInt(f.billNo?.integerValue || 0);
+            if (bn) billMap[bn] = {
+              date: f.date?.stringValue || "",
+              id: doc.name.split("/").pop()
+            };
+          }
+
+          const txDa = new Date(txDate.replace(" ", "T"));
+          const monthsA = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          const todayStrA = txDa.getDate().toString().padStart(2,"0") + " " + monthsA[txDa.getMonth()] + " " + txDa.getFullYear();
+          const created = [];
+
+          for (const tok of billNTokens) {
+            const bill = billMap[tok.billNo];
+            const coversStr = bill ? bill.date : todayStrA; // fallback to transfer date
+            const billId    = bill ? bill.id   : "";
+            const pPayload = {
+              fields: {
+                en:         { stringValue: matched.en },
+                vn:         { stringValue: matched.vn },
+                amount:     { integerValue: String(tok.amount) },
+                covers:     { stringValue: coversStr },
+                date:       { stringValue: todayStrA },
+                method:     { stringValue: "Bank Transfer" },
+                source:     { stringValue: "sepay_webhook_billno" },
+                billNo:     { integerValue: String(tok.billNo) },
+                ...(billId ? { billId: { stringValue: billId } } : {}),
+                sepayId:    { integerValue: String(txId) },
+                refCode:    { stringValue: refCode },
+                rawContent: { stringValue: (content || "").substring(0, 200) },
+                createdAt:  { timestampValue: new Date().toISOString() }
+              }
+            };
+            await fetch(`${FSURL}/payments`, {
+              method: "POST", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify(pPayload)
+            });
+            created.push(`Bill#${tok.billNo} ${coversStr} ${tok.amount/1000}k`);
+          }
+
+          return new Response(JSON.stringify({
+            success: true, matched: true, parser: "billno",
+            member: matched.en, payments: created, sepayId: txId
+          }), { headers: H });
+        }
+
+        // ═══ PARSER B: old amount-day format "Malie 32 11, 35 12, 35 13" ═══
         const multiDayRegex = /\b(\d+)\s+(\d{1,2})\b/g;
         const multiPairs = [];
         let mdMatch;
         const rawForMulti = (content + " " + desc).toLowerCase();
-        // Only try multi-day if matched member and content has comma-separated pairs
         if (matched) {
           while ((mdMatch = multiDayRegex.exec(rawForMulti)) !== null) {
             const amt = parseInt(mdMatch[1]);
@@ -544,7 +610,6 @@ export default {
         }
 
         if (matched && multiPairs.length >= 2) {
-          // Multi-day payment: create one payment record per day
           const txDx = new Date(txDate.replace(" ", "T"));
           const monthsx = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
           const txYearx = txDx.getFullYear();
