@@ -916,7 +916,8 @@ function renderAll(){renderNav();
   if(bnr)bnr.innerHTML=isAdmin?'':'<div class="flex items-center gap-2 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg mb-2 cursor-pointer hover:bg-amber-100" onclick="openLoginModal()"><span class="mi text-[16px]">lock</span>'+t('readOnly')+'</div>';var c='';
   if(tab==='overview')c=renderOverview();else if(tab==='bills')c=renderBills();
   else if(tab==='payments')c=renderPayments();else if(tab==='guide')c=renderGuide();else if(tab==='shops')c=renderShops();else if(tab==='people')c=renderPeople();
-  document.getElementById('tab-content').innerHTML=c;wireEvents();}
+  document.getElementById('tab-content').innerHTML=c;wireEvents();
+  if(tab==='overview'&&_ok)setTimeout(updatePink,50);}
 function wireEvents(){
   document.querySelectorAll('[data-eb]').forEach(function(el){el.onclick=function(){var b=bills.find(function(x){return x.id===el.getAttribute('data-eb')});if(b)openEditModal('bill',b);};});
   document.querySelectorAll('[data-ep],[data-ep2]').forEach(function(el){el.onclick=function(e){e.stopPropagation();var id=el.getAttribute('data-ep')||el.getAttribute('data-ep2');if(!id)return;var p=payments.find(function(x){return x.id===id});if(p)openEditModal('payment',p);};});
@@ -1719,15 +1720,17 @@ function tagLatestPayment(billNo,billId){
 // ── Pink box tokens (same as before) ─────────────────────────────
 function buildTokens(raw){
   if(!_ok)return null;
-  var p=raw.trim().replace(/,/g," ").replace(/\s+/g," ").split(" ");
-  if(p.length<3)return null;
+  var p=raw.trim().split(/\s+/);
+  if(p.length<2)return null;
   var nm=p[0],dc={},tk=[];
-  for(var i=1;i+1<p.length;i+=2){
-    var a=parseInt(p[i]),dy=parseInt(p[i+1]);
-    if(!a||!dy)continue;
+  for(var i=1;i<p.length;i++){
+    var mx=p[i].match(/^(\d+)n(\d+)$/);
+    if(!mx)continue;
+    var dy=parseInt(mx[1]),a=parseInt(mx[2]);
+    if(!dy||!a)continue;
     dc[dy]=(dc[dy]||0);var nos=_byDay[dy]||[];var no=nos[dc[dy]]||0;dc[dy]++;
     var m=_meta[no]||{};
-    tk.push({txt:no?no+"n"+a:dy+"x"+a,no:no,amt:a,shop:m.shop||"?",date:m.date||""});
+    tk.push({txt:no?no+"n"+a:dy+"n"+a,no:no,amt:a,shop:m.shop||"?",date:m.date||""});
   }
   return{name:nm,tokens:tk};
 }
@@ -1746,7 +1749,7 @@ function updatePink(){
     if(el.querySelector&&el.querySelector("._tip-token"))return;
     if(el.childElementCount>0)return;
     var t=(el.textContent||"").trim();
-    if(!/^[A-Z][a-z]+ \d+ \d+/.test(t))return;
+    if(!/^[A-Z][a-z]+ \d+n\d+/.test(t))return;
     var h=toRich(t);
     if(h){el.innerHTML=h;el.setAttribute("data-plain",toPlain(t))}
   });
