@@ -751,11 +751,18 @@ function renderBills(){
         html+='<div class="bg-surface-low p-4 rounded-xl"><div class="flex justify-between mb-1 text-sm"><span class="text-txt3">'+t('billTotal')+'</span><span class="font-bold">'+fmt(total)+'&#273;</span></div><div class="flex justify-between mb-1 text-sm"><span class="text-secondary">'+t('received')+'</span><span class="font-bold text-secondary">'+fmt(received)+'&#273;</span></div>';
         if(short_>0)html+='<div class="flex justify-between mb-1 text-sm border-t border-outline-v/30 pt-1 mt-1"><span class="text-error font-semibold">'+t('balance')+'</span><span class="font-bold text-error">'+fmt(-short_)+'&#273;</span></div>';
         html+='<div class="prog mt-2"><div class="prog-bar '+progColor+'" style="width:'+pct+'%"></div></div></div></div>';
-        // Not yet paid - use items if available, else fallback to all members
-        var unpaidList;
-        if(billItems.length){unpaidList=billItems.filter(function(it){return!paidNames[it.en]}).map(function(it){return it.en});}
-        else{unpaidList=notPaid;}
-        if(unpaidList.length)html+='<div class="px-5 py-3 bg-error-c/20 border-t border-error-c/30 text-sm text-error-on"><span class="font-bold">'+t('notYetPaid')+' ('+unpaidList.length+'):</span> '+esc(unpaidList.join(', '))+'</div>';
+        // Not yet paid — show name + amount per person + total unpaid sum
+        if(billItems.length){
+          var estPP=billItems.length>0?Math.round(total/billItems.length):0;
+          var unpaidItems=billItems.filter(function(it){return!paidNames[it.en];}).map(function(it){return{en:it.en,amt:it.price>0?it.price:estPP};});
+          if(unpaidItems.length){
+            var unpaidTotal=unpaidItems.reduce(function(s,it){return s+it.amt;},0);
+            var unpaidStr=unpaidItems.map(function(it){return esc(it.en)+' <b>'+fmtK(it.amt)+'</b>';}).join(' · ');
+            html+='<div class="px-5 py-3 bg-error-c/20 border-t border-error-c/30 text-sm text-error-on"><span class="font-bold">'+t('notYetPaid')+' ('+unpaidItems.length+'):</span> '+unpaidStr+'<span style="margin-left:8px;padding-left:8px;border-left:1px solid rgba(185,28,28,.3);font-weight:700">= '+fmtK(unpaidTotal)+'</span></div>';
+          }
+        }else if(notPaid.length){
+          html+='<div class="px-5 py-3 bg-error-c/20 border-t border-error-c/30 text-sm text-error-on"><span class="font-bold">'+t('notYetPaid')+' ('+notPaid.length+'):</span> '+esc(notPaid.join(', '))+'</div>';
+        }
         html+='</div>';
       });
       html+='</div>';}
