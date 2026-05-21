@@ -471,9 +471,14 @@ function renderOverview(){
     rh+='<div class="text-[10px] text-error/70 mt-2">Click to edit and assign to correct bill date</div></div>';
   }
 
-    // Member stats cards
+    // Member stats cards — sort by outstanding debt (highest first), then original order
   var mStats=calcMemberStats();
-  var sortedM=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
+  var sortedM=members.slice().sort(function(a,b){
+    var ao=mStats[a.en]?mStats[a.en].totalOwed:0;
+    var bo=mStats[b.en]?mStats[b.en].totalOwed:0;
+    if(bo!==ao)return bo-ao;
+    return(a.order||99)-(b.order||99);
+  });
   var cardsHtml='';
   sortedM.forEach(function(m){
     var s=mStats[m.en]||{totalPaid:0,totalOwed:0,unpaidDates:[],daysEaten:0,totalBillDays:0,avgMeal:0,avgSpeed:0,favDish:'',favCount:0,payCount:0};
