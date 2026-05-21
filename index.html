@@ -289,19 +289,18 @@ function calcMemberBalances(){
   var status={};
   members.forEach(function(m){status[m.en]={unpaidDates:[],paidDates:[],totalPaid:0,totalOwed:0};});
   
-  // Only count payments for THIS WEEK's bills
-  var thisWeekBills=bills.filter(function(b){return getWeekKey(b.date)==='thisWeek';});
-  var thisWeekDates={};
-  thisWeekBills.forEach(function(b){thisWeekDates[normDate(b.date)]=true;});
-  
-  // Only count payments that match this week's bills
+  // Count ALL bills (not just this week) so debt persists until paid
+  var allBillDates={};
+  bills.forEach(function(b){allBillDates[normDate(b.date)]=true;});
+
+  // Count payments matching any bill date
   payments.forEach(function(p){
     if(!status[p.en])return;
     var cn=normDate(p.covers||p.date);
-    if(thisWeekDates[cn])status[p.en].totalPaid+=(p.amount||0);
+    if(allBillDates[cn])status[p.en].totalPaid+=(p.amount||0);
   });
 
-  thisWeekBills.forEach(function(bill){
+  bills.forEach(function(bill){
     var billItems=bill.items||[];if(!billItems.length)return;
     var bp=paymentsForBill(bill);
     var paidNames={};bp.forEach(function(p){paidNames[p.en]=true;});
@@ -567,7 +566,7 @@ function renderOverview(){
     cardsHtml+='</div>';
   });
 
-  var balSection='<section class="mt-4"><div class="flex items-center gap-2 mb-3"><span class="mi text-[18px] text-txt3">bar_chart</span><h3 class="text-sm font-semibold">'+t('memberBalance')+' — '+t('thisWeek')+'</h3></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'+cardsHtml+'</div></section>';
+  var balSection='<section class="mt-4"><div class="flex items-center gap-2 mb-3"><span class="mi text-[18px] text-txt3">bar_chart</span><h3 class="text-sm font-semibold">'+t('memberBalance')+' — '+t('outstanding')+'</h3></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">'+cardsHtml+'</div></section>';
 
   return '<section class="grid grid-cols-2 lg:grid-cols-4 gap-3">'+
     '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-outline-v/20"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px]">receipt_long</span><span class="text-xs font-bold uppercase tracking-wider">'+t('totalBills')+'</span></div><div class="text-headline font-bold">'+fmt(totalB)+' <span class="text-sm font-normal text-txt3">&#273;</span></div></div>'+
