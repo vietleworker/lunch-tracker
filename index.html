@@ -366,18 +366,17 @@ function calcMemberStats(){
         if(p.billId)return p.billId===b.id;
         return normDate(p.covers||p.date)===billNorm;
       });
-      if(!pay)return null; // unpaid = no score yet
-      var refD=pay.createdAt?(pay.createdAt.toDate?pay.createdAt.toDate():new Date(pay.createdAt)):billD;
+      // paid → delay locked at pay date; unpaid → delay grows until today
+      var refD=pay?(pay.createdAt?(pay.createdAt.toDate?pay.createdAt.toDate():new Date(pay.createdAt)):billD):new Date();
       var delay=Math.max(0,Math.round((refD-billD)/(1000*60*60*24)));
-      return Math.max(0.5,5-delay);
+      return {score:Math.max(0.5,5-delay),paid:!!pay};
     }
 
-    // This week average — only PAID bills count (unpaid = pending, no score yet)
+    // This week average — all bills (paid: locked score; unpaid: live decreasing score)
     var weekScores=[];
     thisWeekBills.forEach(function(b){
       if(!(b.items||[]).some(function(it){return it.en===en;}))return;
-      var sc=calcBillScore(b,myPayments);
-      if(sc!==null)weekScores.push(sc);
+      weekScores.push(calcBillScore(b,myPayments).score);
     });
     var avgSpeed=weekScores.length?Math.round(weekScores.reduce(function(s,v){return s+v;},0)/weekScores.length*10)/10:0;
 
@@ -386,27 +385,14 @@ function calcMemberStats(){
     for(var wk=0;wk<4;wk++){
       var wStart=new Date(startOfWeek);wStart.setDate(startOfWeek.getDate()-7*wk);
       var wEnd=new Date(wStart);wEnd.setDate(wStart.getDate()+7);
-      var wScores=[];
+      var wScores=[];var wPending=false;
       bills.forEach(function(b){
         if(!(b.items||[]).some(function(it){return it.en===en;}))return;
         var d=new Date(normDate(b.date)+'T12:00:00');
         if(d<wStart||d>=wEnd)return;
-        if(wk===0){
-          // Current week: skip unpaid (score not locked in yet)
-          var sc=calcBillScore(b,myPayments);
-          if(sc!==null)wScores.push(sc);
-        }else{
-          // Past weeks: unpaid bills get max penalty (delay = today - billDate)
-          var billNorm2=normDate(b.date);
-          var billD2=new Date(billNorm2+'T12:00:00');
-          var pay2=myPayments.find(function(p){
-            if(p.billId)return p.billId===b.id;
-            return normDate(p.covers||p.date)===billNorm2;
-          });
-          var refD2=pay2?(pay2.createdAt?(pay2.createdAt.toDate?pay2.createdAt.toDate():new Date(pay2.createdAt)):billD2):new Date();
-          var delay2=Math.max(0,Math.round((refD2-billD2)/(1000*60*60*24)));
-          wScores.push(Math.max(0.5,5-delay2));
-        }
+        var r=calcBillScore(b,myPayments);
+        wScores.push(r.score);
+        if(!r.paid)wPending=true;
       });
       if(!wScores.length)continue;
       var wAvg=Math.round(wScores.reduce(function(s,v){return s+v;},0)/wScores.length*10)/10;
@@ -415,7 +401,7 @@ function calcMemberStats(){
       weekHistory.push({
         label:wk===0?'This week':wk===1?'Last week':wk+' weeks ago',
         range:d1+' - '+d2,avg:wAvg,meals:wScores.length,
-        pending:wk===0
+        pending:wk===0&&wPending
       });
     }
 
@@ -512,20 +498,15 @@ function renderOverview(){
       else stars+='<span style="color:#e5e7eb">\u2605</span>';
     }
     // Build history tooltip rows
-    var histRows='<div style="font-size:10px;color:#737373;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px">score = max(0.5, 5 - delay days)<br>this week: paid bills only \u2014 unpaid = no score yet</div>';
+    var histRows='<div style="font-size:10px;color:#737373;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px">score = max(0.5, 5 \u2013 delay days)<br>paid \u2192 score locked \u00b7 unpaid \u2192 score drops daily</div>';
     var histList=s.weekHistory||[];
     histList.forEach(function(wk,wi){
       var prev=histList[wi+1];
       var trend=prev?(wk.avg>prev.avg?'<span style="color:#059669">\u2191</span>':wk.avg<prev.avg?'<span style="color:#dc2626">\u2193</span>':'<span style="color:#737373">\u2192</span>'):'';
       var bar='';for(var i=1;i<=5;i++)bar+=(i<=Math.round(wk.avg)?'\u2605':'\u2606');
-      var isPending=wk.pending&&wk.meals===0;
       histRows+='<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;'+(wi===0?'font-weight:700':'')+'">';
-      histRows+='<span>'+wk.label+'<span style="font-size:9px;color:#aaa;margin-left:4px">('+wk.range+')</span>'+(wk.pending?'<span style="font-size:9px;color:#0ea5e9;margin-left:4px">paid only</span>':'')+'</span>';
-      if(isPending){
-        histRows+='<span style="font-size:9px;color:#aaa;font-style:italic">pending...</span>';
-      }else{
-        histRows+='<span style="display:flex;align-items:center;gap:4px"><span style="color:#d97706;letter-spacing:-1px">'+bar+'</span><span style="font-size:10px;color:#525252">'+wk.avg+'</span>'+trend+'</span>';
-      }
+      histRows+='<span>'+wk.label+'<span style="font-size:9px;color:#aaa;margin-left:4px">('+wk.range+')</span>'+(wk.pending?'<span style="font-size:9px;color:#f59e0b;margin-left:4px">↓ live</span>':'')+'</span>';
+      histRows+='<span style="display:flex;align-items:center;gap:4px"><span style="color:#d97706;letter-spacing:-1px">'+bar+'</span><span style="font-size:10px;color:#525252">'+wk.avg+'</span>'+trend+'</span>';
       histRows+='</div>';
     });
     if(!histList.length)histRows+='<div style="color:#aaa;font-size:11px">No data yet</div>';
