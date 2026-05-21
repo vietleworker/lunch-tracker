@@ -1,0 +1,3 @@
+name = "falling-wood-1078"
+main = "cloudflare_worker_v2.js"
+compatibility_date = "2024-01-01"
