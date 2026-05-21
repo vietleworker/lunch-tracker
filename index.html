@@ -748,8 +748,11 @@ function renderBills(){
           html+='</div></div>';
         }
         // Summary
+        var estPP0=billItems.length>0?Math.round(total/billItems.length):0;
+        var pendingAmt=billItems.reduce(function(s,it){return s+(paidNames[it.en]?0:(it.price>0?it.price:estPP0));},0);
         html+='<div class="bg-surface-low p-4 rounded-xl"><div class="flex justify-between mb-1 text-sm"><span class="text-txt3">'+t('billTotal')+'</span><span class="font-bold">'+fmt(total)+'&#273;</span></div><div class="flex justify-between mb-1 text-sm"><span class="text-secondary">'+t('received')+'</span><span class="font-bold text-secondary">'+fmt(received)+'&#273;</span></div>';
         if(short_>0)html+='<div class="flex justify-between mb-1 text-sm border-t border-outline-v/30 pt-1 mt-1"><span class="text-error font-semibold">'+t('balance')+'</span><span class="font-bold text-error">'+fmt(-short_)+'&#273;</span></div>';
+        if(pendingAmt>0)html+='<div class="flex justify-between mt-1 text-sm border-t border-outline-v/30 pt-1"><span class="text-error font-semibold">'+t('notYetPaid')+'</span><span class="font-bold text-error">'+fmtK(pendingAmt)+'</span></div>';
         html+='<div class="prog mt-2"><div class="prog-bar '+progColor+'" style="width:'+pct+'%"></div></div></div></div>';
         // Not yet paid — show name + amount per person + total unpaid sum
         if(billItems.length){
