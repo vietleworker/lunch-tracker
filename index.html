@@ -314,7 +314,7 @@ function calcMemberBalances(){
       if(paidNames[item.en]){
         status[item.en].paidDates.push(shortDate);
       }else{
-        status[item.en].unpaidDates.push({date:shortDate,amount:itemAmt});
+        status[item.en].unpaidDates.push({date:shortDate,amount:itemAmt,billId:bill.id,billNo:bill.billNo||0,billNote:(bill.note||'').replace(/^#\d+\s*/,'').substring(0,30)});
         status[item.en].totalOwed+=itemAmt;
       }
     });
@@ -531,21 +531,31 @@ function renderOverview(){
     // Favorite dish or unpaid alert
     if(hasUnpaid){
       var unpaidRows=s.unpaidDates.map(function(u){return(u.date||u)+' <b>'+fmtK(u.amount||0)+'</b>';}).join(' &middot; ');
-      var tplParts=s.unpaidDates.map(function(u){
+      // Build token list — use billNo if available, else day number
+      var tokenList=s.unpaidDates.map(function(u){
         var ds=(u.date||u)+'';
-        // Parse "11 May" or "11 May 2026" â get day number
         var dayMatch=ds.match(/^(\d+)/);
-        var day=dayMatch?dayMatch[1]:ds;
-        return day+'n'+Math.round((u.amount||0)/1000);
+        var day=dayMatch?parseInt(dayMatch[1]):0;
+        var amt=Math.round((u.amount||0)/1000);
+        var no=u.billNo||0;
+        return {token:(no?no:day)+'n'+amt,amt:amt,no:no,date:ds,note:u.billNote||''};
+      });
+      var copyTpl=s.en+' '+tokenList.map(function(tk){return tk.token;}).join(' ');
+      // Rich HTML with inline tooltips — no updatePink() timing issues
+      var richTokens=tokenList.map(function(tk){
+        var tip=tk.amt+'k';
+        if(tk.no)tip+=' &middot; Bill #'+tk.no;
+        if(tk.note)tip+='<br><span style="color:#93c5fd">'+esc(tk.note)+'</span>';
+        tip+='<br><span style="color:#fbbf24">'+esc(tk.date)+'</span>';
+        return '<span class="_tip-wrap"><span class="_tip-token" tabindex="0">'+esc(tk.token)+'<span class="_tip-box">'+tip+'</span></span></span>';
       }).join(' ');
-      var copyTpl=s.en+' '+tplParts;
       cardsHtml+='<div style="background:#fef2f2;border-radius:8px;padding:7px 10px;font-size:11px;color:#991b1b">';
       cardsHtml+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">';
       cardsHtml+='<span><span class="mi" style="font-size:12px;vertical-align:middle">warning</span> <b>Owes '+fmtK(s.totalOwed)+'</b></span>';
-      cardsHtml+='<button data-tpl="'+esc(copyTpl)+'" onclick="copyTemplate(this.getAttribute('+"'data-tpl'"+ '))" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">Copy</button><button onclick="showQR(this)" style="margin-left:4px;padding:2px 8px;border-radius:6px;border:1px solid #6366f1;background:#eef2ff;color:#4f46e5;font-size:11px;font-weight:600;cursor:pointer">Scan</button>';
+      cardsHtml+='<button data-tpl="'+esc(copyTpl)+'" onclick="copyTemplate(this.getAttribute('+"'data-tpl'"+'))" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer">Copy</button><button onclick="showQR(this)" style="margin-left:4px;padding:2px 8px;border-radius:6px;border:1px solid #6366f1;background:#eef2ff;color:#4f46e5;font-size:11px;font-weight:600;cursor:pointer">Scan</button>';
       cardsHtml+='</div>';
       cardsHtml+='<div style="color:#991b1b;margin-bottom:4px">'+unpaidRows+'</div>';
-      cardsHtml+='<div style="font-size:10px;color:#7f1d1d;background:#fee2e2;border-radius:4px;padding:3px 6px;word-break:break-all">'+esc(copyTpl)+'</div>';
+      cardsHtml+='<div class="_pink-box" style="font-size:10px;color:#7f1d1d;background:#fee2e2;border-radius:4px;padding:3px 6px;word-break:break-all" data-plain="'+esc(copyTpl)+'">'+s.en+' '+richTokens+'</div>';
       cardsHtml+='</div>';
     }else if(s.favDish){
       cardsHtml+='<div style="font-size:11px;color:#737373"><span class="mi" style="font-size:12px;color:#dc2626">favorite</span> '+esc(s.favDish)+' ('+s.favCount+'x)</div>';
