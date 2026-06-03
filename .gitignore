@@ -1,3 +1,6 @@
 .env
 *.key
 service-account*.json
+.DS_Store
+.wrangler/
+.claude/settings.local.json

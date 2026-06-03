@@ -1,5 +1,370 @@
 // Lunch Tracker API — Cloudflare Worker v2
 // ═══════════════════════════════════════════════════
+
+const UPDATE_BILL_HTML = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cập nhật món ăn</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;min-height:100vh}
+.top-bar{background:#fff;padding:12px 16px 10px;border-bottom:1px solid #e5e7eb;position:sticky;top:0;z-index:10}
+.bill-title{font-size:16px;font-weight:700;color:#111}
+.bill-info{font-size:12px;color:#6b7280;margin-top:2px}
+.sum-row{display:flex;justify-content:space-between;align-items:center;margin-top:9px;padding-top:9px;border-top:1px solid #f0f0f0}
+.sum-label{font-size:13px;color:#374151}
+.sum-val{font-size:14px;font-weight:700}
+.sum-ok{color:#059669}.sum-warn{color:#dc2626}
+.wrap{padding:12px;max-width:540px;margin:0 auto}
+.member-card{background:#fff;border:2px solid #e5e7eb;border-radius:14px;margin-bottom:12px;overflow:hidden;transition:border-color .15s}
+.member-card.active{border-color:#3b82f6}
+.card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer}
+.card-check{width:20px;height:20px;accent-color:#3b82f6;cursor:pointer;flex-shrink:0}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0}
+.member-names{flex:1;min-width:0}
+.member-en{font-size:15px;font-weight:700;color:#111}
+.member-vn{font-size:12px;color:#6b7280}
+.card-badge{font-size:14px;font-weight:700;color:#3b82f6;flex-shrink:0}
+.dish-section{border-top:1px solid #f0f4f8;padding:2px 14px 10px}
+.dish-label{font-size:11px;font-weight:700;color:#6b7280;letter-spacing:.05em;text-transform:uppercase;padding:10px 0 6px}
+.dish-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f9fafb}
+.dish-row:last-of-type{border-bottom:none}
+.dish-check{width:18px;height:18px;accent-color:#3b82f6;cursor:pointer;flex-shrink:0}
+.dish-name{flex:1;font-size:14px;color:#111;cursor:pointer}
+.dish-price{font-size:14px;font-weight:600;color:#3b82f6;flex-shrink:0}
+.total-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px;border-top:1px solid #f0f4f8;margin-top:6px}
+.total-label{font-size:13px;color:#374151}
+.total-amount{font-size:16px;font-weight:700;color:#111}
+.bottom-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #e5e7eb;padding:12px 16px;max-width:540px;margin:0 auto}
+.btn-save{width:100%;background:#3b82f6;color:#fff;border:none;border-radius:11px;padding:14px;font-size:16px;font-weight:700;cursor:pointer}
+.btn-save:disabled{opacity:.5;cursor:not-allowed}
+.loading{text-align:center;padding:60px 20px;color:#6b7280;font-size:15px}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 20px;border-radius:12px;font-size:14px;font-weight:600;z-index:999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25);transition:opacity .3s}
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">⏳ Đang tải…</div>
+
+<div id="app" style="display:none">
+  <div class="top-bar">
+    <div class="bill-title" id="h-title">Cập nhật món ăn</div>
+    <div class="bill-info" id="h-sub"></div>
+    <div class="sum-row">
+      <span class="sum-label">Sum of items</span>
+      <span class="sum-val sum-warn" id="sum-val">0k</span>
+    </div>
+  </div>
+  <div class="wrap" id="members-wrap"></div>
+  <div style="height:72px"></div>
+</div>
+
+<div class="bottom-bar" id="bottom-bar" style="display:none">
+  <button class="btn-save" id="btn-save" onclick="saveBill()">💾 Save bill</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, query, where, getDocs, getDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const WORKER = "https://falling-wood-1078.viet-le-worker.workers.dev";
+const SECRET = "lunch-enclave-2025";
+
+const app = initializeApp({
+  apiKey:"AIzaSyDrbRVGxjlU77S1AyfI4K7GFC-g5HI5FEo",
+  authDomain:"lunche-81567.firebaseapp.com",
+  projectId:"lunche-81567",
+  storageBucket:"lunche-81567.firebasestorage.app",
+  messagingSenderId:"1031125665255",
+  appId:"1:1031125665255:web:cef82dd2abb76e61bca942"
+});
+const db = getFirestore(app);
+
+const params = new URLSearchParams(location.search);
+const billNoRaw = (params.get("bill") || params.get("billNo") || "").trim();
+const billId = params.get("id") || "";
+
+let bill = null, members = [], shopItems = [], allDishes = [];
+let memberChecks = {};   // { en: { dish: bool } }
+let memberIncluded = {}; // { en: bool }
+let dirty = {};          // { en: true } — members this session actually edited
+let lastItemsJSON = "";  // snapshot of bill.items we last applied (to detect remote changes)
+let justSaved = false;   // true right after THIS user saves (so we don't toast our own change)
+
+function noDiac(s) {
+  return String(s||"").toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/đ/g,'d').replace(/\\s+/g,' ').trim();
+}
+
+async function init() {
+  try {
+    if (billId) {
+      const d = await getDoc(doc(db,"bills",billId));
+      if (d.exists()) bill = {id:d.id,...d.data()};
+    } else if (billNoRaw) {
+      // Try string match (new date-code billNo like "0306261"), then numeric (old #1..#20)
+      let snap = await getDocs(query(collection(db,"bills"), where("billNo","==",billNoRaw)));
+      if (snap.empty && /^\\d+$/.test(billNoRaw))
+        snap = await getDocs(query(collection(db,"bills"), where("billNo","==",parseInt(billNoRaw))));
+      if (!snap.empty) { const d=snap.docs[0]; bill={id:d.id,...d.data()}; }
+    }
+    if (!bill) { document.getElementById("loading").textContent="❌ Không tìm thấy bill."; return; }
+
+    const [mSnap, sSnap] = await Promise.all([
+      getDocs(collection(db,"members")),
+      getDocs(collection(db,"shops"))
+    ]);
+    mSnap.forEach(d => members.push({id:d.id,...d.data()}));
+    members.sort((a,b)=>(a.order??99)-(b.order??99));
+
+    const noteNorm = noDiac(bill.note||"");
+    let matchedShop = null;
+    sSnap.forEach(d => {
+      const s = {id:d.id,...d.data()};
+      const sname = noDiac(s.name||"").replace(/quan /g,"");
+      if (sname.length > 2 && noteNorm.includes(sname)) matchedShop = s;
+    });
+    shopItems = matchedShop ? (matchedShop.items||[]) : [];
+
+    computeAllDishes();
+    applyItemsToState(bill.items||[], /*force*/true);
+    lastItemsJSON = itemsKey(bill.items||[]);
+
+    render();
+    document.getElementById("loading").style.display="none";
+    document.getElementById("app").style.display="block";
+    document.getElementById("bottom-bar").style.display="block";
+
+    // ── Real-time sync: listen for remote changes to this bill ──
+    listenForUpdates();
+  } catch(e) {
+    document.getElementById("loading").textContent="❌ "+e.message;
+  }
+}
+
+// allDishes = UNION of shop menu + any single custom dish already in bill.items.
+// bill.items dish may be comma-joined ("A, B") with a summed price — those dishes
+// come from the shop menu so they resolve via shopItems. Only single-dish custom
+// items have a reliable per-dish price worth adding.
+// Stable, order-insensitive signature of an items array (to detect real changes)
+function itemsKey(items) {
+  return (items||[]).map(it => \`\${it.en}::\${it.dish}::\${it.price}\`).sort().join("|");
+}
+
+function computeAllDishes() {
+  const dishMap = new Map();
+  shopItems.forEach(it => { if (it.dish) dishMap.set(it.dish, it.price); });
+  (bill.items||[]).forEach(it => {
+    const names = String(it.dish||"").split(",").map(s=>s.trim()).filter(Boolean);
+    if (names.length === 1 && !dishMap.has(names[0])) dishMap.set(names[0], it.price||0);
+  });
+  allDishes = [...dishMap.entries()].map(([dish,price])=>({dish,price})).sort((a,b)=>a.price-b.price);
+}
+
+// Rebuild memberChecks/memberIncluded from a bill.items array.
+// When force=false, members currently being edited (dirty) keep their local edits.
+function applyItemsToState(items, force) {
+  members.forEach(m => {
+    if (!force && dirty[m.en]) return; // preserve this user's in-progress edits
+    memberIncluded[m.en] = false;
+    memberChecks[m.en] = {};
+  });
+  (items||[]).forEach(it => {
+    if (!force && dirty[it.en]) return;
+    memberIncluded[it.en] = true;
+    memberChecks[it.en] = memberChecks[it.en] || {};
+    String(it.dish||"").split(",").map(s=>s.trim()).filter(Boolean).forEach(dn => {
+      memberChecks[it.en][dn] = true;
+    });
+  });
+}
+
+function listenForUpdates() {
+  onSnapshot(doc(db,"bills",bill.id), (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    const newItems = data.items || [];
+    const newJSON = itemsKey(newItems);
+    if (newJSON === lastItemsJSON) return; // nothing new (or our own echo already applied)
+
+    // Adopt remote data; preserve members this user is editing right now.
+    bill = { id: bill.id, ...data };
+    computeAllDishes();
+    applyItemsToState(newItems, /*force*/false);
+    lastItemsJSON = newJSON;
+    render();
+    if (!justSaved) showToast("🔄 Vừa cập nhật từ người khác");
+    justSaved = false;
+  });
+}
+
+function memberTotal(en) {
+  const c = memberChecks[en]||{};
+  return allDishes.reduce((s,it)=>c[it.dish]?s+it.price:s, 0);
+}
+function grandTotal() {
+  return members.filter(m=>memberIncluded[m.en]).reduce((s,m)=>s+memberTotal(m.en),0);
+}
+function updateSumBar() {
+  const gt = grandTotal(), bt = bill.total||0;
+  const el = document.getElementById("sum-val");
+  const diff = gt-bt, diffStr = diff>=0?\`+\${diff/1000|0}k\`:\`\${diff/1000|0}k\`;
+  el.textContent = \`\${(gt/1000)|0}k / \${(bt/1000)|0}k (\${diffStr})\`;
+  el.className = "sum-val "+(Math.abs(diff)<5000?"sum-ok":"sum-warn");
+}
+
+function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/'/g,"&#39;"); }
+
+function render() {
+  const note = (bill.note||"").replace(/^#\\d+\\s*/,"");
+  document.getElementById("h-title").textContent = note.split(" - ")[0]||"Bill";
+  document.getElementById("h-sub").textContent =
+    \`Bill #\${bill.billNo} · \${bill.date} · \${Number(bill.total||0).toLocaleString("vi-VN")}đ\`;
+  updateSumBar();
+
+  const wrap = document.getElementById("members-wrap");
+  wrap.innerHTML = members.map(m => {
+    const included = memberIncluded[m.en];
+    const checks = memberChecks[m.en]||{};
+    const total = memberTotal(m.en);
+    const bg = m.bg||"#f3f4f6", fg = m.fg||"#374151";
+    const initials = (m.en||"?").slice(0,2).toUpperCase();
+
+    const dishRows = allDishes.map(it => \`
+      <div class="dish-row">
+        <input type="checkbox" class="dish-check"
+          id="chk-\${esc(m.en)}-\${esc(it.dish)}"
+          \${checks[it.dish]?'checked':''}
+          onchange="onCheck('\${esc(m.en)}','\${esc(it.dish)}',this.checked)">
+        <label class="dish-name" for="chk-\${esc(m.en)}-\${esc(it.dish)}">\${esc(it.dish)}</label>
+        <span class="dish-price">\${(it.price/1000)|0}k</span>
+      </div>\`).join('');
+
+    return \`
+    <div class="member-card\${included?' active':''}" id="card-\${esc(m.en)}">
+      <div class="card-header" onclick="toggleHeader(event,'\${esc(m.en)}')">
+        <input type="checkbox" class="card-check"
+          \${included?'checked':''}
+          onchange="onInclude('\${esc(m.en)}',this.checked)">
+        <div class="avatar" style="background:\${bg};color:\${fg}">\${initials}</div>
+        <div class="member-names">
+          <div class="member-en">\${esc(m.en)}</div>
+          <div class="member-vn">\${esc(m.vn||"")}</div>
+        </div>
+        <div class="card-badge" id="badge-\${esc(m.en)}">\${total>0?(total/1000|0)+'k':''}</div>
+      </div>
+      <div class="dish-section" id="dishes-\${esc(m.en)}" style="\${included?'':'display:none'}">
+        <div class="dish-label">DISH</div>
+        \${dishRows}
+        <div class="total-row">
+          <span class="total-label">Total:</span>
+          <span class="total-amount" id="total-\${esc(m.en)}">\${total.toLocaleString('vi-VN')} đ</span>
+        </div>
+      </div>
+    </div>\`;
+  }).join('');
+}
+
+// Clicking anywhere on header (not the checkbox) toggles include too
+window.toggleHeader = function(e, en) {
+  if (e.target.classList.contains('card-check')) return; // checkbox handles itself
+  const cb = document.querySelector(\`#card-\${CSS.escape(en)} .card-check\`);
+  if (cb) { cb.checked = !cb.checked; window.onInclude(en, cb.checked); }
+};
+
+window.onInclude = function(en, checked) {
+  memberIncluded[en] = checked;
+  dirty[en] = true;
+  const card = document.getElementById("card-"+en);
+  if (card) {
+    card.classList.toggle("active", checked);
+    const sec = document.getElementById("dishes-"+en);
+    if (sec) sec.style.display = checked?"":"none";
+  }
+  updateSumBar();
+};
+
+window.onCheck = function(en, dish, checked) {
+  if (!memberChecks[en]) memberChecks[en]={};
+  memberChecks[en][dish] = checked;
+  memberIncluded[en] = true;  // ticking a dish implies this person ate
+  dirty[en] = true;
+  const total = memberTotal(en);
+  const badge = document.getElementById("badge-"+en);
+  if (badge) badge.textContent = total>0?(total/1000|0)+'k':'';
+  const ta = document.getElementById("total-"+en);
+  if (ta) ta.textContent = total.toLocaleString('vi-VN')+" đ";
+  updateSumBar();
+};
+
+window.saveBill = async function() {
+  const touched = Object.keys(dirty);
+  if (touched.length === 0) { showToast("Chưa có thay đổi nào"); return; }
+
+  const btn = document.getElementById("btn-save");
+  btn.disabled=true; btn.textContent="⏳ Đang lưu…";
+
+  try {
+    // Re-fetch latest items so concurrent edits by others aren't clobbered
+    let latest = [];
+    try {
+      const d = await getDoc(doc(db,"bills",bill.id));
+      if (d.exists()) latest = d.data().items || [];
+    } catch(_) { latest = bill.items || []; }
+
+    // Keep items for members NOT touched this session
+    const final = latest.filter(it => !dirty[it.en]);
+
+    // Add fresh items for members this session edited.
+    // App format = ONE item per person: dish = comma-joined names, price = SUM.
+    members.forEach(m => {
+      if (!dirty[m.en]) return;
+      if (!memberIncluded[m.en]) return; // user unchecked => ate nothing
+      const checks = memberChecks[m.en]||{};
+      const sel = allDishes.filter(it => checks[it.dish]);
+      if (sel.length === 0) return;
+      final.push({
+        en: m.en, vn: m.vn||"",
+        dish: sel.map(it=>it.dish).join(", "),
+        price: sel.reduce((s,it)=>s+it.price, 0)
+      });
+    });
+
+    const res = await fetch(WORKER, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({action:"updateDoc",secret:SECRET,collection:"bills",docId:bill.id,fields:{items:final}})
+    });
+    const json = await res.json();
+    if (json.success) {
+      bill.items = final;
+      lastItemsJSON = itemsKey(final);
+      justSaved = true;   // suppress "updated by someone else" toast for our own echo
+      dirty = {};
+      showToast("✅ Đã lưu! Tổng "+final.length+" món");
+    } else {
+      showToast("❌ Lỗi: "+(json.error||"unknown"));
+    }
+  } catch(e) { showToast("❌ "+e.message); }
+
+  btn.disabled=false; btn.textContent="💾 Save bill";
+};
+
+function showToast(msg) {
+  const t=document.createElement("div");
+  t.className="toast"; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity="0";setTimeout(()=>t.remove(),300);},2500);
+}
+
+init();
+</script>
+</body>
+</html>
+`;
 // Actions: addBill, addPayment, addMember,
 //          updateDoc, deleteDoc,
 //          deployHTML  ← NEW: deploy index.html to Firebase Hosting
@@ -152,26 +517,38 @@ async function deleteDoc(collection, docId, token) {
 }
 
 // ── Firebase Hosting deploy ──────────────────────────
+// Deploys MULTIPLE files in one version. Every deploy always also
+// ships /update-bill.html (from UPDATE_BILL_HTML) so the share page
+// lives on the Google domain alongside the app — and never disappears
+// when index.html is redeployed.
 async function deployHTML(htmlContent) {
   const token = await getToken("https://www.googleapis.com/auth/firebase.hosting");
   const HURL = "https://firebasehosting.googleapis.com/v1beta1";
 
-  // 1. Gzip the content
+  // Files to ship this version: path -> raw content
+  const files = {
+    "/index.html": htmlContent,
+    "/update-bill.html": UPDATE_BILL_HTML
+  };
+
+  // 1. Gzip + SHA-256 each file
   const encoder = new TextEncoder();
-  const raw = encoder.encode(htmlContent);
-  const cs = new CompressionStream("gzip");
-  const writer = cs.writable.getWriter();
-  writer.write(raw);
-  writer.close();
-  const gzBuf = await new Response(cs.readable).arrayBuffer();
-  const gz = new Uint8Array(gzBuf);
+  const pathToSha = {};   // "/index.html" -> sha
+  const shaToGz = {};     // sha -> gz bytes
+  for (const [path, content] of Object.entries(files)) {
+    const cs = new CompressionStream("gzip");
+    const writer = cs.writable.getWriter();
+    writer.write(encoder.encode(content));
+    writer.close();
+    const gzBuf = await new Response(cs.readable).arrayBuffer();
+    const gz = new Uint8Array(gzBuf);
+    const hashBuf = await crypto.subtle.digest("SHA-256", gz);
+    const sha = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    pathToSha[path] = sha;
+    shaToGz[sha] = gz;
+  }
 
-  // 2. SHA-256 of gzipped content
-  const hashBuf = await crypto.subtle.digest("SHA-256", gz);
-  const hashArr = new Uint8Array(hashBuf);
-  const sha = Array.from(hashArr).map(b => b.toString(16).padStart(2, "0")).join("");
-
-  // 3. Create version
+  // 2. Create version
   const verRes = await fetch(`${HURL}/sites/${SITE}/versions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -181,27 +558,31 @@ async function deployHTML(htmlContent) {
   if (ver.error) throw new Error("Create version: " + ver.error.message);
   const verName = ver.name;
 
-  // 4. Populate files
+  // 3. Populate files (all paths)
   const popRes = await fetch(`${HURL}/${verName}:populateFiles`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ files: { "/index.html": sha } })
+    body: JSON.stringify({ files: pathToSha })
   });
   const pop = await popRes.json();
   if (pop.error) throw new Error("Populate: " + pop.error.message);
 
-  // 5. Upload if needed
+  // 4. Upload required hashes
   if (pop.uploadRequiredHashes && pop.uploadRequiredHashes.length > 0) {
     const uploadUrl = pop.uploadUrl;
-    const upRes = await fetch(`${uploadUrl}/${sha}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/octet-stream" },
-      body: gz
-    });
-    if (!upRes.ok) throw new Error("Upload failed: " + upRes.status);
+    for (const sha of pop.uploadRequiredHashes) {
+      const gz = shaToGz[sha];
+      if (!gz) continue;
+      const upRes = await fetch(`${uploadUrl}/${sha}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/octet-stream" },
+        body: gz
+      });
+      if (!upRes.ok) throw new Error("Upload failed (" + sha.slice(0,8) + "): " + upRes.status);
+    }
   }
 
-  // 6. Finalize
+  // 5. Finalize
   const finRes = await fetch(`${HURL}/${verName}?update_mask=status`, {
     method: "PATCH",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -210,7 +591,7 @@ async function deployHTML(htmlContent) {
   const fin = await finRes.json();
   if (fin.error) throw new Error("Finalize: " + fin.error.message);
 
-  // 7. Release
+  // 6. Release
   const relRes = await fetch(`${HURL}/sites/${SITE}/releases?versionName=${verName}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
@@ -218,7 +599,7 @@ async function deployHTML(htmlContent) {
   const rel = await relRes.json();
   if (rel.error) throw new Error("Release: " + rel.error.message);
 
-  return { version: verName, url: `https://${SITE}.web.app` };
+  return { version: verName, url: `https://${SITE}.web.app`, files: Object.keys(files) };
 }
 
 // ── Helpers ──────────────────────────────────────────
@@ -226,6 +607,19 @@ function today() {
   const d = new Date();
   return d.getDate().toString().padStart(2, "0") + " " +
     d.toLocaleString("en-US", { month: "short" }) + " " + d.getFullYear();
+}
+
+// Date -> DDMMYY code (e.g. "03 Jun 2026" -> "030626"). Basis of date-based billNo.
+function dateToCode(dateStr) {
+  let d;
+  const m = String(dateStr || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  else d = new Date(dateStr);
+  if (isNaN(d)) d = new Date();
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  return dd + mm + yy;
 }
 
 const H = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
@@ -253,6 +647,18 @@ export default {
       const action = url.searchParams.get("action");
       const path = url.pathname;
       const BASE = url.origin;
+
+      // /update-bill — public page for team to self-update meal items (no login needed)
+      if (path === "/update-bill") {
+        return new Response(UPDATE_BILL_HTML, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "X-Content-Type-Options": "nosniff"
+          }
+        });
+      }
 
       // /run — execute any write action via GET (secret in URL)
       if (path === "/run") {
@@ -410,7 +816,8 @@ export default {
             const senderMap = {
               "vu":"Vin","viet":"Victor","hoa":"Malie","nhi":"Emily",
               "duc":"Gerard","hung":"Parker","duong":"Duke","cuong":"Currie",
-              "tuyet":"Gracie","khanh":"Jimmy","khai":"Warren","dash":"Dash"
+              "tuyet":"Gracie","khanh":"Jimmy","khai":"Warren","dash":"Dash",
+              "hien":"Joyce"
             };
             if (senderMap[givenName]) matched = members.find(m => m.en === senderMap[givenName]);
           }
@@ -433,7 +840,8 @@ export default {
               const sMap = {
                 "vu":"Vin","viet":"Victor","hoa":"Malie","nhi":"Emily",
                 "duc":"Gerard","hung":"Parker","duong":"Duke","cuong":"Currie",
-                "tuyet":"Gracie","khanh":"Jimmy","khai":"Warren","dash":"Dash"
+                "tuyet":"Gracie","khanh":"Jimmy","khai":"Warren","dash":"Dash",
+                "hien":"Joyce"
               };
               if (sMap[givenName]) matched = members.find(m => m.en === sMap[givenName]);
             }
@@ -459,7 +867,7 @@ export default {
               "hoa":"Malie","nhi":"Emily","uyen nhi":"Emily","hung":"Parker",
               "duong":"Duke","cuong":"Currie","tuyet":"Gracie",
               "vu":"Vin","viet":"Victor","khanh":"Jimmy","khai":"Warren","dash":"Dash",
-              "duc":"Gerard"
+              "duc":"Gerard","hien":"Joyce"
               // "nguyen" excluded: common surname, would match Nero for everyone
             };
             for (const [key, en] of Object.entries(nameMap)) {
@@ -529,13 +937,14 @@ export default {
         // Pattern: (billNo)n(amountK) — each token = 1 payment linked to a specific bill
         const billNTokens = [];
         const rawForBillN = (content + " " + desc);
-        const billNRegex = /\b(\d{1,2})n(\d+)\b/gi;
+        // Old billNo = 1-2 digits (#1..#99); new date-code billNo = 6-8 digits (DDMMYY + seq).
+        const billNRegex = /\b(\d{1,2}|\d{6,8})n(\d+)\b/gi;
         let bnMatch;
         if (matched) {
           while ((bnMatch = billNRegex.exec(rawForBillN)) !== null) {
-            const billNo = parseInt(bnMatch[1]);
+            const billNo = bnMatch[1];   // keep as string to preserve leading zero
             const amt    = parseInt(bnMatch[2]);
-            if (billNo >= 1 && amt >= 5 && amt <= 500) {
+            if (billNo && amt >= 5 && amt <= 500) {
               billNTokens.push({ billNo, amount: amt * 1000 });
             }
           }
@@ -545,10 +954,10 @@ export default {
           // Load bills to map billNo → covers date + billId
           const bRes = await fetch(`${FSURL}/bills?pageSize=200`, { headers: { Authorization: `Bearer ${token}` } });
           const bData = await bRes.json();
-          const billMap = {}; // billNo → { date, id }
+          const billMap = {}; // billNo(string) → { date, id }
           for (const doc of (bData.documents || [])) {
             const f = doc.fields || {};
-            const bn = parseInt(f.billNo?.integerValue || 0);
+            const bn = f.billNo?.stringValue || (f.billNo?.integerValue != null ? String(f.billNo.integerValue) : "");
             if (bn) billMap[bn] = {
               date: f.date?.stringValue || "",
               id: doc.name.split("/").pop()
@@ -562,8 +971,16 @@ export default {
 
           for (const tok of billNTokens) {
             const bill = billMap[tok.billNo];
-            const coversStr = bill ? bill.date : todayStrA; // fallback to transfer date
-            const billId    = bill ? bill.id   : "";
+            // Bill ID must exist — no fallback to day-of-month.
+            if (!bill) {
+              return new Response(JSON.stringify({
+                success: false, matched: true, parser: "billno",
+                error: `Bill #${tok.billNo} not found. Payment NOT recorded.`,
+                member: matched.en, sepayId: txId
+              }), { status: 422, headers: H });
+            }
+            const coversStr = bill.date;
+            const billId    = bill.id;
             const pPayload = {
               fields: {
                 en:         { stringValue: matched.en },
@@ -573,8 +990,8 @@ export default {
                 date:       { stringValue: todayStrA },
                 method:     { stringValue: "Bank Transfer" },
                 source:     { stringValue: "sepay_webhook_billno" },
-                billNo:     { integerValue: String(tok.billNo) },
-                ...(billId ? { billId: { stringValue: billId } } : {}),
+                billNo:     { stringValue: String(tok.billNo) },
+                billId:     { stringValue: billId },
                 sepayId:    { integerValue: String(txId) },
                 refCode:    { stringValue: refCode },
                 rawContent: { stringValue: (content || "").substring(0, 200) },
@@ -736,6 +1153,7 @@ export default {
     }
     // ═══ End SePay Webhook ═══
     try {
+      const clonedForJson = request.clone();
       let p = await request.formData().catch(() => null);
       let action, secret;
 
@@ -743,10 +1161,10 @@ export default {
         action = p.get("action");
         secret = p.get("secret");
       } else {
-        const json = await request.clone().json().catch(() => ({}));
+        const json = await clonedForJson.json().catch(() => ({}));
         action = json.action;
         secret = json.secret;
-        p = { _json: json, get(k) { return this._json[k] || ""; } };
+        p = { _json: json, get(k) { return this._json[k] ?? ""; } };
       }
 
       if (secret !== SECRET) {
@@ -770,16 +1188,62 @@ async function handleAction(action, p) {
     const token = await getToken();
 
     if (action === "addBill") {
-      const data = { date: gf(p, "date") || today(), total: gi(p, "total"), note: gf(p, "note") || "" };
+      // Date-based billNo: DDMMYY + bill-of-day sequence (string, keeps leading zero).
+      // e.g. 1st bill of 3 Jun 2026 -> "0306261", 2nd -> "0306262".
+      const billDate = gf(p, "date") || today();
+      const code = dateToCode(billDate);
+      const bRes = await fetch(`${FSURL}/bills?pageSize=300`, { headers: { Authorization: `Bearer ${token}` } });
+      const bData = await bRes.json();
+      // Sequence = "Nth bill of this calendar day". Count ALL bills on the same date
+      // (incl. old integer-billNo bills), and also track max existing date-code seq so
+      // we never collide with an existing code after deletions.
+      let sameDayCount = 0, maxSeq = 0;
+      for (const doc of (bData.documents || [])) {
+        const f = doc.fields || {};
+        const bdate = f.date?.stringValue || "";
+        if (dateToCode(bdate) === code) {
+          sameDayCount++;
+          const bn = f.billNo?.stringValue;
+          if (bn && bn.startsWith(code) && bn.length > code.length) {
+            const seq = parseInt(bn.slice(code.length));
+            if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+          }
+        }
+      }
+      const newBillNo = code + (Math.max(sameDayCount, maxSeq) + 1); // string
+      // Auto-prepend #billNo to note if not already present
+      const rawNote = gf(p, "note") || "";
+      const note = rawNote.startsWith("#") ? rawNote : `#${newBillNo} ${rawNote}`.trim();
+      const data = { date: billDate, total: gi(p, "total"), note, billNo: newBillNo };
       if (gf(p, "photoData")) data.photoData = gf(p, "photoData");
       const id = await addDoc("bills", data, token);
-      return new Response(JSON.stringify({ success: true, id }), { headers: H });
+      return new Response(JSON.stringify({ success: true, id, billNo: newBillNo, note }), { headers: H });
     }
 
     if (action === "addPayment") {
+      const en     = gf(p, "en");
+      const covers = gf(p, "covers") || today();
+      // ── Duplicate check: same person + same covers date ──
+      const dupRes = await fetch(`${FSURL}/payments:runQuery`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ structuredQuery: {
+          from: [{ collectionId: "payments" }],
+          where: { compositeFilter: { op: "AND", filters: [
+            { fieldFilter: { field: { fieldPath: "en" }, op: "EQUAL", value: { stringValue: en } } },
+            { fieldFilter: { field: { fieldPath: "covers" }, op: "EQUAL", value: { stringValue: covers } } }
+          ]}},
+          limit: 1
+        }})
+      });
+      const dupData = await dupRes.json();
+      if (Array.isArray(dupData) && dupData.some(r => r.document)) {
+        const existingId = dupData.find(r => r.document)?.document?.name?.split("/").pop();
+        return new Response(JSON.stringify({ success: false, error: "duplicate", existingId, en, covers }), { headers: H });
+      }
       const data = {
-        en: gf(p, "en"), vn: gf(p, "vn"),
-        amount: gi(p, "amount"), covers: gf(p, "covers") || today(),
+        en, vn: gf(p, "vn"),
+        amount: gi(p, "amount"), covers,
         method: gf(p, "method") || "Bank Transfer", date: gf(p, "date") || today()
       };
       if (gf(p, "photoData")) data.photoData = gf(p, "photoData");
@@ -804,7 +1268,7 @@ async function handleAction(action, p) {
       if (!collection || !docId || !fieldsJson) {
         return new Response(JSON.stringify({ error: "Need collection, docId, fields" }), { status: 400, headers: H });
       }
-      const fields = JSON.parse(fieldsJson);
+      const fields = (typeof fieldsJson === "object") ? fieldsJson : JSON.parse(fieldsJson);
       const id = await updateDoc(collection, docId, fields, token);
       return new Response(JSON.stringify({ success: true, id }), { headers: H });
     }

@@ -219,6 +219,24 @@ function displayDate(ds){
   if(isNaN(d))return ds;
   return d.getDate().toString().padStart(2,'0')+' '+d.toLocaleString('en-US',{month:'short'})+' '+d.getFullYear();
 }
+// Date -> DDMMYY code (basis of date-based billNo, matches Worker dateToCode)
+function dateCode(ds){
+  var d,m=String(ds||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m)d=new Date(+m[1],+m[2]-1,+m[3]);else d=new Date(ds);
+  if(isNaN(d))d=new Date();
+  return String(d.getDate()).padStart(2,'0')+String(d.getMonth()+1).padStart(2,'0')+String(d.getFullYear()).slice(-2);
+}
+// Next date-based billNo for a given date, using already-loaded bills[]
+function nextBillNo(ds){
+  var code=dateCode(ds),sameDay=0,maxSeq=0;
+  bills.forEach(function(b){
+    if(dateCode(b.date)!==code)return;
+    sameDay++;
+    var bn=(b.billNo||'')+'';
+    if(bn.indexOf(code)===0&&bn.length>code.length){var s=parseInt(bn.slice(code.length));if(!isNaN(s)&&s>maxSeq)maxSeq=s;}
+  });
+  return code+(Math.max(sameDay,maxSeq)+1);
+}
 
 function paymentsForBill(bill){
   var billNorm=normDate(bill.date);
@@ -593,19 +611,24 @@ function renderBills(){
   var groups={thisWeek:[],lastWeek:[],earlier:[]};
   sorted.forEach(function(b){var wk=getWeekKey(b.date);(groups[wk]||groups.earlier).push(b);});
   // Within each group: sort by day of week, Friday (5) first â Mon (1) last
-  var DOW_ORDER={5:0,4:1,3:2,2:3,1:4,6:5,0:6};
+  var DOW_ORDER={0:0,6:1,5:2,4:3,3:4,2:5,1:6};// Sun→Sat→Fri→Thu→Wed→Tue→Mon
   function sortByDow(arr){return arr.sort(function(a,b){
-    var da=new Date(a.date),db=new Date(b.date);
+    // Normalize to YYYY-MM-DD first so mixed date formats ("03 Jun 2026" vs
+    // "2026-06-03") don't sort differently due to timezone parsing quirks.
+    var ka=normDate(a.date),kb=normDate(b.date);
+    var da=new Date(ka+'T12:00:00'),db=new Date(kb+'T12:00:00');
     if(isNaN(da)||isNaN(db))return 0;
     var diff=DOW_ORDER[da.getDay()]-DOW_ORDER[db.getDay()];
-    return diff!==0?diff:db.getTime()-da.getTime(); // same DOW â newer first
+    if(diff!==0)return diff;
+    var dd=ka!==kb?(kb<ka?-1:1):0;   // later calendar day first
+    return dd!==0?dd:tsOf(b)-tsOf(a); // same day => newest-created (2nd bill) on top; // same DOW â newer first
   });}
   Object.keys(groups).forEach(function(k){sortByDow(groups[k]);});
 
   // Helper: get week date range
   function getWeekRange(key){
     var now=new Date();var s=new Date(now);s.setDate(now.getDate()-now.getDay()+1);s.setHours(0,0,0,0);// Monday
-    var e=new Date(s);e.setDate(s.getDate()+4);// Friday
+    var e=new Date(s);e.setDate(s.getDate()+6);// Sunday
     if(key==='lastWeek'){s.setDate(s.getDate()-7);e.setDate(e.getDate()-7);}
     else if(key==='earlier')return'';
     var fmt2=function(d){return d.getDate()+' '+d.toLocaleString('en-US',{month:'short'});};
@@ -766,12 +789,35 @@ function renderBills(){
         }else if(notPaid.length){
           html+='<div class="px-5 py-3 bg-error-c/20 border-t border-error-c/30 text-sm text-error-on"><span class="font-bold">'+t('notYetPaid')+' ('+notPaid.length+'):</span> '+esc(notPaid.join(', '))+'</div>';
         }
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px;border-top:1px solid #f0f4f8;background:#fafbfc">';
+        html+='<span style="font-size:11px;color:#9ca3af">Bill #'+(bill.billNo||'?')+'</span>';
+        html+='<button onclick="shareBillLink(event,\''+(bill.billNo||0)+'\')" style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;color:#2563eb;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer">';
+        html+='<span class="mi" style="font-size:14px">link</span>Share link cập nhật món</button>';
+        html+='</div>';
         html+='</div>';
       });
       html+='</div>';}
     html+='</section>';
   });
   html+='</div>';return html;
+}
+function shareBillLink(e,billNo){
+  e.stopPropagation();
+  var url='https://lunche-81567.web.app/update-bill.html?bill='+billNo;
+  if(navigator.share){navigator.share({title:'Cập nhật món ăn – Bill #'+billNo,url:url});}
+  else if(navigator.clipboard){
+    navigator.clipboard.writeText(url).then(function(){showToast('Đã copy link Bill #'+billNo+' 📋');});
+  } else {
+    prompt('Copy link này:', url);
+  }
+}
+function showToast(msg){
+  var t=document.getElementById('toast-host');
+  if(!t){t=document.createElement('div');t.id='toast-host';t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;pointer-events:none';document.body.appendChild(t);}
+  var d=document.createElement('div');
+  d.style.cssText='background:#1f2937;color:#fff;padding:10px 20px;border-radius:12px;font-size:14px;font-weight:600;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25);margin-top:8px;animation:fadein .2s ease';
+  d.textContent=msg;t.appendChild(d);
+  setTimeout(function(){d.style.opacity='0';d.style.transition='opacity .3s';setTimeout(function(){d.remove();},300);},2500);
 }
 function toggleWeek(k){weekState[k]=weekState[k]===false?true:false;renderAll();}
 
@@ -1383,7 +1429,7 @@ function handleSubmit(e){
   e.preventDefault();if(saving||compressing)return;saving=true;
   var fd=new FormData(e.target);var payload,coll;
   if(modal.type==='bill'){
-    coll='bills';payload={date:fd.get('date'),total:parseInt(fd.get('total'))||0,note:fd.get('note')||'',shop:fd.get('shop')||'',label:fd.get('label')||'lunch'};
+    coll='bills';payload={date:fromInputDate(fd.get('date')),total:parseInt(fd.get('total'))||0,note:fd.get('note')||'',shop:fd.get('shop')||'',label:fd.get('label')||'lunch'};
     // Collect member items
     var items=[];var sortedM=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
     sortedM.forEach(function(m,idx){
@@ -1402,6 +1448,12 @@ function handleSubmit(e){
       }
     });
     payload.items=items; // always save, empty array = no items
+    if(modal.mode!=='edit'){
+      // Assign date-based billNo (DDMMYY+seq) + prepend #billNo to note, matching Worker
+      payload.billNo=nextBillNo(payload.date);
+      if(payload.note&&payload.note.charAt(0)==='#'){/* keep */}
+      else payload.note=('#'+payload.billNo+' '+(payload.note||'')).trim();
+    }
   }else{
     coll='payments';var parts=(fd.get('member')||'|').split('|');
     payload={en:parts[0],vn:parts[1]||'',amount:parseInt(fd.get('amount'))||0,covers:fromDateInput(fd.get('covers')),method:fd.get('method')||'Bank Transfer',date:fromDateInput(fd.get('date'))};
@@ -1630,7 +1682,7 @@ fetch(FS+"/bills?pageSize=100").then(function(r){return r.json()}).then(function
     var f=doc.fields||{};
     var ds=(f.date&&f.date.stringValue)||"";
     var nt=(f.note&&f.note.stringValue)||"";
-    var bn=parseInt((f.billNo&&f.billNo.integerValue)||0);
+    var bn=(f.billNo&&(f.billNo.stringValue||f.billNo.integerValue))||"";
     var tt=parseInt((f.total&&(f.total.integerValue||f.total.doubleValue))||0);
     var dy=pDay(ds);
     if(!bn)return;
@@ -1656,7 +1708,7 @@ function detectBillContext(){
     // Match "#12 Com Ga:..." pattern in bill detail view
     var m=t.match(/^#(\d+)\s+/);
     if(m&&el.offsetHeight>0){
-      var no=parseInt(m[1]);
+      var no=m[1];
       if(_meta[no]){found=no;foundId=_meta[no].id;}
     }
   });
@@ -1721,7 +1773,7 @@ function tagLatestPayment(billNo,billId){
       var docs=d.documents||[];
       docs.forEach(function(doc){
         var f=doc.fields||{};
-        var existing=f.billNo&&f.billNo.integerValue;
+        var existing=f.billNo&&(f.billNo.stringValue||f.billNo.integerValue);
         if(existing)return; // Already tagged
         
         var created=doc.createTime||"";
@@ -1734,7 +1786,7 @@ function tagLatestPayment(billNo,billId){
             method:"PATCH",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({fields:{
-              billNo:{integerValue:""+billNo},
+              billNo:{stringValue:""+billNo},
               billId:{stringValue:billId}
             }})
           }).then(function(){
@@ -1754,11 +1806,17 @@ function buildTokens(raw){
   for(var i=1;i<p.length;i++){
     var mx=p[i].match(/^(\d+)n(\d+)$/);
     if(!mx)continue;
-    var dy=parseInt(mx[1]),a=parseInt(mx[2]);
-    if(!dy||!a)continue;
-    dc[dy]=(dc[dy]||0);var nos=_byDay[dy]||[];var no=nos[dc[dy]]||0;dc[dy]++;
-    var m=_meta[no]||{};
-    tk.push({txt:no?no+"n"+a:dy+"n"+a,no:no,amt:a,shop:m.shop||"?",date:m.date||""});
+    var numStr=mx[1],a=parseInt(mx[2]);
+    if(!a)continue;
+    var no,m;
+    if(_meta[numStr]){            // token IS a billNo (old #14 or new date-code like 0306261)
+      no=numStr; m=_meta[numStr];
+    }else{                         // legacy fallback: treat number as day-of-month, remap
+      var dy=parseInt(numStr);
+      dc[dy]=(dc[dy]||0);var nos=_byDay[dy]||[];no=nos[dc[dy]]||0;dc[dy]++;
+      m=_meta[no]||{};
+    }
+    tk.push({txt:no?no+"n"+a:numStr+"n"+a,no:no,amt:a,shop:m.shop||"?",date:m.date||""});
   }
   return{name:nm,tokens:tk};
 }
