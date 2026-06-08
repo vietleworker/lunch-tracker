@@ -168,3 +168,22 @@ Query Firestore REST with the Firebase API key:
 ```
 https://firestore.googleapis.com/v1/projects/lunche-81567/databases/(default)/documents/<collection>?pageSize=300&key=<FIREBASE_API_KEY>
 ```
+
+---
+
+## Known gotchas — read `references/troubleshooting.md`
+
+That file is the full operations/handoff guide. Highlights:
+- **App stuck "Connecting…" / Firestore 403** = Google's test-mode security rules **expired**
+  (`allow … if request.time < timestamp.date(...)`). Worker writes still work (SA bypasses rules),
+  only the browser is denied. Fix = deploy non-expiring rules using the **service account embedded
+  in `cloudflare_worker_v2.js`** (script in troubleshooting.md). Current rules = open read+write.
+- **Use `curl`, not Python `urllib`** — urllib fails TLS in this environment.
+- **macOS `~/Downloads` photos** carry `com.apple.macl` → unreadable; copy into the repo dir first.
+- **Shop IDs**, **service-account details**, **git/PAT warning**, **data-hygiene** (dup payments,
+  billId assignment, "negative Outstanding = overpaid") — all in troubleshooting.md.
+
+## Handoff to a new machine/account
+The repo carries the SA private key + Worker secret (in `cloudflare_worker_v2.js`) and Firebase web
+config (in `index.html`). The **only** secret not in git is `CLOUDFLARE_API_TOKEN` (in `.env`,
+gitignored) — copy `.env` over or mint a new token. **Keep the repo private** (it holds the SA key).

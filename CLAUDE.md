@@ -1,5 +1,9 @@
 # Lunch Tracker — Claude Notes
 
+> **Full guide:** see the `lunch-tracker` skill at `.claude/skills/lunch-tracker/`
+> (`SKILL.md` + `references/deploy.md` + `references/troubleshooting.md`). The troubleshooting
+> file is the complete operations/handoff doc (Firestore-rules fix, service account, git, gotchas).
+
 ## Deploy Cloudflare Worker
 Secrets live in `.env` (gitignored). Load them, then deploy:
 ```bash
@@ -47,9 +51,11 @@ from the `UPDATE_BILL_HTML` constant at the top of the Worker). To update the sh
 ## RULES — Bugs fixed, never repeat these
 
 ### 1. addBill — Worker auto-handles everything now
-- Worker auto-assigns `billNo` (max + 1)
-- Worker auto-prepends `#billNo` to note: `"#15 Quan My - ..."` 
-- Just pass the raw note, Worker does the rest
+- Worker auto-assigns a **date-based `billNo`** (string): `DDMMYY` + bill-of-day sequence,
+  e.g. `0306261` (3 Jun 2026, 1st bill), `0306262` (2nd). Counts all bills on that calendar date.
+- billNo is a STRING (keeps leading zero) — never `parseInt` it for display/links.
+- Worker auto-prepends `#billNo` to note: `"#0306261 Quan My - ..."`. Just pass the raw note.
+- Old bills #1–#20 keep integer numbers; everything understands both.
 
 ### 2. addPayment — Duplicate check built in
 - Worker now rejects duplicate `(en + covers)` with `{success: false, error: "duplicate"}`
@@ -59,11 +65,11 @@ from the `UPDATE_BILL_HTML` constant at the top of the Worker). To update the sh
 - Always use `"23 May 2026"` format, NOT `"2026-05-23"`
 - Wrong format breaks `normDate()` matching in the app
 
-### 4. Bill must have billNo before QR Scan works
-- QR scan content uses bill number: `"Duke 14n35"` = bill #14, 35k
-- Worker now assigns billNo automatically on creation ✓
-- **Parser A NEVER falls back to day-of-month.** If bill ID not found → returns 422 error, payment NOT created.
-- All bills always have billNos. If a payment fails with "Bill #X not found", check billNo in Firestore.
+### 4. QR / transfer-content scan uses billNo
+- Content token = `billNo` + `n` + amountK: `"Duke 0306261n35"` = bill 0306261, 35k.
+- SePay webhook parser (Worker) matches BOTH old (1–2 digit) and new (6–8 digit date-code) IDs:
+  regex `/\b(\d{1,2}|\d{6,8})n(\d+)\b/`. billNo kept as string.
+- **Parser NEVER falls back to day-of-month.** Unknown bill ID → 422, payment NOT created.
 
 ### 5. One payment per day per person
 - `covers` must always be a single date like `"23 May 2026"`
@@ -75,10 +81,27 @@ from the `UPDATE_BILL_HTML` constant at the top of the Worker). To update the sh
 - If `success: false, error: "duplicate"` → tell Victor and ask whether to update existing
 
 ### 7. Photo upload
-- Compress with PIL: max 1200px wide, JPEG quality 75, apply EXIF rotation
-- Use Firebase SDK HTML tool (NOT Worker updateDoc GET — URL too long for base64)
-- Check ~/Downloads for recent .jpeg files when user sends receipt photo
+- Compress with PIL: max 1200px wide, JPEG quality 75, EXIF transpose → base64 data URL.
+- Attach via Worker **POST** (`addBill` photoData, or `updateDoc {photoData}`). POST handles size; never GET.
+- ~/Downloads photos often have `com.apple.macl` → unreadable; copy into the repo dir first, then read & delete.
 
-### 8. Two bills today (different shops) 
-- Each shop visit = separate bill with its own date
-- Don't merge two restaurants into one bill
+### 8. Two bills today (different shops)
+- Each shop visit = separate bill with its own date (sequence counts both that day).
+- Don't merge two restaurants into one bill.
+
+### 9. Firestore "test mode" rules expire → app 403s
+- If the webapp loads but can't read data (client 403, but Worker writes still work), the
+  Firestore security rules expired. Fix = deploy non-expiring rules via the embedded service
+  account. Full script in `.claude/skills/lunch-tracker/references/troubleshooting.md` §1.
+
+### 10. Use curl, not Python urllib
+- Python `urllib` fails TLS verification in this environment. Always call HTTPS via `curl`.
+
+---
+
+## Handoff (new machine / account)
+- Repo carries the **service-account key + Worker secret** (in `cloudflare_worker_v2.js`) and the
+  **Firebase web config** (in `index.html`). The only secret NOT in git is `CLOUDFLARE_API_TOKEN`
+  (in `.env`, gitignored) — copy `.env` over or mint a new token. See `.env.example`.
+- **Keep this repo PRIVATE** — it contains the SA private key. If leaked, rotate SA key + Worker
+  secret + Cloudflare token. Note: `origin` URL has a GitHub PAT embedded (rotate / use SSH).
