@@ -276,7 +276,7 @@ function compressImage(file,maxW,quality){
 
 function showLightbox(src){document.getElementById('lightbox-host').innerHTML='<div class="fixed inset-0 bg-black/92 z-[200] flex items-center justify-center p-5" onclick="this.parentNode.innerHTML=\'\'"><button onclick="event.stopPropagation();this.parentNode.parentNode.innerHTML=\'\'" class="absolute top-4 right-4 bg-white/10 text-white w-10 h-10 rounded-full flex items-center justify-center backdrop-blur text-lg">&times;</button><img src="'+src+'" class="max-w-full max-h-full object-contain rounded"/></div>';}
 
-var TABS=[{id:'overview',icon:'dashboard'},{id:'bills',icon:'receipt_long'},{id:'payments',icon:'payments'},{id:'guide',icon:'account_balance'},{id:'shops',icon:'storefront'},{id:'people',icon:'group'}];
+var TABS=[{id:'overview',icon:'dashboard'},{id:'bills',icon:'receipt_long'},{id:'payments',icon:'payments'},{id:'shops',icon:'storefront'},{id:'people',icon:'group'}];
 
 function renderNav(){
   var sb='',mn='';
@@ -889,61 +889,6 @@ function clearPFilter(){pFilter={name:'',week:'',date:''};renderAll();}
 
 /* ââ PEOPLE ââ */
 
-function renderGuide(){
-  var QR="https://img.vietqr.io/image/970423-01448819001-compact2.png?amount=0&addInfo=lunch&accountName=LE%20HOANG%20VIET";
-  var h='';
-  h+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 overflow-hidden mb-4">';
-  h+='<div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);padding:24px;color:#fff;text-align:center">';
-  h+='<div style="font-size:11px;opacity:.7;letter-spacing:1px;margin-bottom:4px">TPBANK</div>';
-  h+='<div style="font-size:22px;font-weight:800;letter-spacing:2px;margin-bottom:4px">0144 8819 001</div>';
-  h+='<div style="font-size:14px;opacity:.85">LE HOANG VIET</div></div>';
-  h+='<div style="padding:20px;text-align:center;background:#faf5ff">';
-  h+='<div class="text-xs text-txt3 font-bold mb-2" style="text-transform:uppercase;letter-spacing:.5px">'+t('guideScanQR')+'</div>';
-  h+='<img src="'+QR+'" style="max-width:240px;width:100%;border-radius:12px;margin:0 auto;display:block"/>';
-  h+='</div></div>';
-  h+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-5 mb-4">';
-  h+='<h3 class="text-sm font-bold text-primary mb-3" style="text-transform:uppercase;letter-spacing:.5px">'+t('guideHowTo')+'</h3>';
-  ['guideStep1','guideStep2','guideStep3'].forEach(function(s,i){
-    var icons=['\u27A1','\u270D','\u2705'];
-    h+='<div style="display:flex;gap:10px;align-items:center;padding:8px 0;'+(i<2?'border-bottom:1px solid #f0f0f0;':'')+'"><div style="width:28px;height:28px;border-radius:50%;background:#e8f0fe;display:flex;align-items:center;justify-content:center;font-size:14px">'+icons[i]+'</div><div style="font-size:13px;color:#1c1917;font-weight:500">'+t(s)+'</div></div>';
-  });
-  h+='</div>';
-  var contents=['parker','parker 40 12','parker 11 12','parker 50 11 40 12','emily 11 12 13 14 15'];
-  h+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-5 mb-4">';
-  h+='<h3 class="text-sm font-bold text-primary mb-4" style="text-transform:uppercase;letter-spacing:.5px">'+t('guideContent')+'</h3>';
-  [1,2,3,4,5].forEach(function(n){
-    h+='<div style="border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px;background:'+(n%2===0?'#f7f9fb':'#fff')+'">';
-    h+='<div style="font-size:13px;font-weight:700;color:#0050cb;margin-bottom:6px">'+t('guideScTitle'+n)+'</div>';
-    h+='<div style="font-size:12px;color:#525252;line-height:1.6;margin-bottom:8px;font-style:italic">'+t('guideScDesc'+n)+'</div>';
-    h+='<div style="font-size:11px;color:#737373;margin-bottom:2px">'+t('guideScTransfer'+n)+'</div>';
-    h+='<div style="font-size:11px;color:#737373;margin-bottom:4px">'+t('guideScWrite'+n)+'</div>';
-    h+='<div style="background:#1e293b;border-radius:8px;padding:10px 14px;margin-bottom:8px;text-align:center">';
-    h+='<span style="font-family:monospace;font-size:18px;font-weight:700;color:#38bdf8;letter-spacing:1px">'+contents[n-1]+'</span></div>';
-    h+='<div style="background:#dcfce7;border-radius:8px;padding:8px 12px;font-size:12px;color:#166534;line-height:1.5"><b>\u2192</b> '+t('guideScResult'+n)+'</div>';
-    var nk='guideScNote'+n;if(t(nk)!==nk){h+='<div style="font-size:11px;color:#9ca3af;margin-top:6px;padding-left:8px;border-left:2px solid #e2e8f0">\u0110 '+t(nk)+'</div>';}
-    h+='</div>';
-  });
-  h+='</div>';
-  h+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-5 mb-4">';
-  h+='<h3 class="text-sm font-bold text-primary mb-3" style="text-transform:uppercase;letter-spacing:.5px">'+t('guideFormatTitle')+'</h3>';
-  h+='<div style="background:#1e293b;border-radius:10px;padding:16px;text-align:center;margin-bottom:12px">';
-  h+='<div style="font-family:monospace;font-size:20px;font-weight:700;color:#38bdf8;letter-spacing:1px">parker 50 11 40 12</div>';
-  h+='<div style="display:flex;justify-content:center;gap:12px;margin-top:8px;font-size:10px;color:#94a3b8">';
-  h+='<span>\u2191 name</span><span>\u2191 50k</span><span>\u2191 d11</span><span>\u2191 40k</span><span>\u2191 d12</span></div></div>';
-  h+='<div style="font-size:12px;color:#525252;line-height:1.8">';
-  h+='\u2022 '+t('guideFormatNoDay')+'<br>\u2022 '+t('guideFormatNoAmt')+'</div>';
-  h+='<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:11px;color:#854d0e;line-height:1.5;margin-top:10px"><b>\u26A0</b> '+t('guideWarn')+'</div>';
-  h+='</div>';
-  h+='<div class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-5">';
-  h+='<h3 class="text-sm font-bold text-primary mb-3" style="text-transform:uppercase;letter-spacing:.5px">'+t('guideNames')+'</h3>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">';
-  members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)}).forEach(function(m){
-    h+='<div style="display:flex;justify-content:space-between;padding:5px 10px;border-radius:6px;background:#f7f9fb;font-size:12px"><span style="font-weight:700;color:#0050cb">'+esc(m.en)+'</span><span style="color:#727687">'+esc(m.vn)+'</span></div>';
-  });
-  h+='</div></div>';
-  return h;
-}
-
 function renderPeople(){
   var sorted=members.slice().sort(function(a,b){return(a.order||99)-(b.order||99)});
   if(!sorted.length)return'<div class="text-center text-txt3 py-12">'+t('noData')+'</div>';
@@ -989,7 +934,7 @@ function renderAll(){renderNav();
   var bnr=document.getElementById('auth-banner');
   if(bnr)bnr.innerHTML=isAdmin?'':'<div class="flex items-center gap-2 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg mb-2 cursor-pointer hover:bg-amber-100" onclick="openLoginModal()"><span class="mi text-[16px]">lock</span>'+t('readOnly')+'</div>';var c='';
   if(tab==='overview')c=renderOverview();else if(tab==='bills')c=renderBills();
-  else if(tab==='payments')c=renderPayments();else if(tab==='guide')c=renderGuide();else if(tab==='shops')c=renderShops();else if(tab==='people')c=renderPeople();
+  else if(tab==='payments')c=renderPayments();else if(tab==='shops')c=renderShops();else if(tab==='people')c=renderPeople();
   document.getElementById('tab-content').innerHTML=c;wireEvents();
   if(tab==='overview'&&_ok)setTimeout(updatePink,50);}
 function wireEvents(){
@@ -1085,61 +1030,6 @@ function render(){if(bOk&&pOk&&mOk)renderAll();}
 
 function openAddModal(){if(!isAdmin){openLoginModal();return;}modal={type:'bill',mode:'add',data:null};pendingPhoto=null;renderModal();}
 
-
-function openPayGuide(){
-  var host=document.getElementById('modal-host');
-  var h='<div style="position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px" id="gbg">';
-  h+='<div style="background:#fff;width:100%;max-width:480px;max-height:90vh;border-radius:20px;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.15)" onclick="event.stopPropagation()">';
-  // Header
-  h+='<div style="position:sticky;top:0;background:#fff;display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e5e7eb;z-index:1"><span style="font-size:16px;font-weight:700">Huong dan chuyen khoan</span><button onclick="document.getElementById(\'modal-host\').innerHTML=\'\'" style="width:32px;height:32px;border:none;background:#f5f5f4;border-radius:50%;cursor:pointer;font-size:16px">&times;</button></div>';
-  // Bank info
-  h+='<div style="padding:16px 20px">';
-  h+='<div style="background:linear-gradient(135deg,#0066ff,#0050cb);border-radius:14px;padding:20px;color:#fff;margin-bottom:14px;text-align:center">';
-  h+='<div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">TPBank</div>';
-  h+='<div style="font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:2px">0144 8819 001</div>';
-  h+='<div style="font-size:13px;opacity:.85">LE HOANG VIET</div></div>';
-
-  // Examples
-  var exs=[
-    ["1 ngay","parker","Chi ghi ten = tra hom nay","1 payment hom nay"],
-    ["1 ngay cu the","parker 40 12","Ten + so tien (nghin) + ngay","40k ngay 12"],
-    ["2 ngay chia deu","parker 11 12","Ten + 2 ngay = chia deu tien","50% ngay 11 + 50% ngay 12"],
-    ["2 ngay khac tien","parker 50 11 40 12","Ten + [so tien + ngay] lap lai","50k ngay 11, 40k ngay 12"],
-    ["Ca tuan","emily 11 12 13 14 15","Ten + 5 ngay = chia deu","5 payments chia deu"]
-  ];
-  exs.forEach(function(ex){
-    h+='<div style="border:1.5px solid #e8f0fe;border-radius:10px;padding:12px;margin-bottom:8px;position:relative">';
-    h+='<div style="position:absolute;top:-8px;left:10px;background:#0066ff;color:#fff;font-size:9px;font-weight:700;padding:1px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.3px">'+ex[0]+'</div>';
-    h+='<div style="font-family:monospace;font-size:15px;font-weight:700;color:#0050cb;margin:4px 0 2px;letter-spacing:.5px">'+ex[1]+'</div>';
-    h+='<div style="font-size:11px;color:#727687;line-height:1.4">'+ex[2]+'</div>';
-    h+='<div style="margin-top:4px"><span style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px">'+ex[3]+'</span></div>';
-    h+='</div>';
-  });
-
-  // Rules
-  h+='<div style="background:#f7f9fb;border-radius:10px;padding:12px;margin:10px 0;font-size:12px;color:#424656;line-height:1.7">';
-  h+='<b style="color:#0050cb">Quy tac:</b><br>';
-  h+='1. Ghi <b>ten tieng Anh</b> hoac <b>tieng Viet</b><br>';
-  h+='2. So tien don vi <b>nghin dong</b> (50 = 50,000d)<br>';
-  h+='3. Ngay ghi <b>so ngay trong thang</b> (11, 12...)<br>';
-  h+='4. Khong ghi ngay = <b>hom nay</b><br>';
-  h+='5. Khong ghi so tien = <b>chia deu</b></div>';
-
-  // Member names
-  h+='<div style="font-size:12px;font-weight:700;color:#0050cb;margin:10px 0 6px;text-transform:uppercase;letter-spacing:.5px">Danh sach ten</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">';
-  var names=[["Malie","Hoa"],["Emily","Nhi"],["Gerard","Duc"],["Parker","Hung"],["Duke","Duong"],["Currie","Cuong"],["Nero","Nguyen"],["Gracie","Tuyet"],["Vin","Vu"],["Victor","Viet"],["Jimmy","Khanh"],["Dash","Duc"]];
-  names.forEach(function(n){
-    h+='<div style="display:flex;justify-content:space-between;padding:4px 8px;border-radius:6px;background:#f7f9fb;font-size:12px"><span style="font-weight:700;color:#0050cb">'+n[0]+'</span><span style="color:#727687">'+n[1]+'</span></div>';
-  });
-  h+='</div>';
-
-  h+='<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:11px;color:#854d0e;line-height:1.5;margin-top:10px"><b>Luu y:</b> Ghi dung ten de he thong tu nhan dien. Sai ten = khong ghi nhan tu dong.</div>';
-
-  h+='</div></div></div>';
-  host.innerHTML=h;
-  document.getElementById('gbg').onclick=function(e){if(e.target.id==='gbg')document.getElementById('modal-host').innerHTML='';};
-}
 
 function openLoginModal(){
   var host=document.getElementById('modal-host');
