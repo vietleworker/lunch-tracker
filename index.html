@@ -16,14 +16,14 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config={darkMode:"class",theme:{extend:{colors:{
-bg:"#f7f9fb",surface:"#f7f9fb","surface-low":"#f2f4f6","surface-high":"#e6e8ea",
-"surface-dim":"#e0e3e5","surface-white":"#ffffff",
-primary:"#0050cb","primary-c":"#0066ff","primary-bg":"#dae1ff","primary-on":"#f8f7ff",
+bg:"rgb(var(--c-bg)/<alpha-value>)",surface:"rgb(var(--c-surface)/<alpha-value>)","surface-low":"rgb(var(--c-surface-low)/<alpha-value>)","surface-high":"rgb(var(--c-surface-high)/<alpha-value>)",
+"surface-dim":"rgb(var(--c-surface-dim)/<alpha-value>)","surface-white":"rgb(var(--c-surface-white)/<alpha-value>)",
+primary:"#0050cb","primary-c":"#0066ff","primary-bg":"rgb(var(--c-primary-bg)/<alpha-value>)","primary-on":"#f8f7ff",
 secondary:"#006c49","secondary-c":"#6cf8bb","secondary-on":"#00714d",
 tertiary:"#7f4f00","tertiary-c":"#a06500","tertiary-bg":"#ffddb8",
-error:"#ba1a1a","error-c":"#ffdad6","error-on":"#93000a",
-outline:"#727687","outline-v":"#c2c6d8",
-txt:"#191c1e","txt2":"#424656","txt3":"#727687"
+error:"#ba1a1a","error-c":"rgb(var(--c-error-c)/<alpha-value>)","error-on":"#93000a",
+outline:"rgb(var(--c-outline)/<alpha-value>)","outline-v":"rgb(var(--c-outline-v)/<alpha-value>)",
+txt:"rgb(var(--c-txt)/<alpha-value>)",txt2:"rgb(var(--c-txt2)/<alpha-value>)",txt3:"rgb(var(--c-txt3)/<alpha-value>)"
 },fontFamily:{sans:["Inter","system-ui","sans-serif"]},
 fontSize:{"display":["32px",{lineHeight:"40px",letterSpacing:"-0.02em",fontWeight:"700"}],
 "headline":["24px",{lineHeight:"32px",letterSpacing:"-0.01em",fontWeight:"600"}],
@@ -32,7 +32,25 @@ fontSize:{"display":["32px",{lineHeight:"40px",letterSpacing:"-0.02em",fontWeigh
 "body":["16px",{lineHeight:"24px",fontWeight:"400"}],
 "body-sm":["14px",{lineHeight:"20px",fontWeight:"400"}]}}}}
 </script>
+<script>try{var _t=localStorage.getItem('lt-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');if(_t==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
 <style>
+:root{--c-bg:247 249 251;--c-surface:247 249 251;--c-surface-low:242 244 246;--c-surface-high:230 232 234;--c-surface-dim:224 227 229;--c-surface-white:255 255 255;--c-primary-bg:218 225 255;--c-error-c:255 218 214;--c-outline:114 118 135;--c-outline-v:194 198 216;--c-txt:25 28 30;--c-txt2:66 70 86;--c-txt3:114 118 135}
+html.dark{--c-bg:15 20 30;--c-surface:15 20 30;--c-surface-low:30 37 51;--c-surface-high:44 53 71;--c-surface-dim:55 65 81;--c-surface-white:26 33 46;--c-primary-bg:30 48 92;--c-error-c:92 38 38;--c-outline:120 130 150;--c-outline-v:50 60 78;--c-txt:236 239 244;--c-txt2:198 205 216;--c-txt3:150 158 172}
+html.dark .shadow-card{box-shadow:0 4px 20px rgba(0,0,0,.35)}
+html.dark img{filter:brightness(.92)}
+/* Dark-mode overrides for hard-coded inline light surfaces/text */
+html.dark [style*="background:#fef2f2"],html.dark [style*="background:#fee2e2"],html.dark [style*="background:#fef9c3"]{background:#2a1d22!important}
+html.dark [style*="background:#f8f9fc"],html.dark [style*="background:#f7f9fb"],html.dark [style*="background:#f9fafb"],html.dark [style*="background:#fafbfc"],html.dark [style*="background:#f0f4f8"],html.dark [style*="background:#f0f0f0"],html.dark [style*="background:#f5f5f4"],html.dark [style*="background:#fafafa"]{background:#1c2330!important}
+html.dark [style*="background:#faf5ff"]{background:#241c30!important}
+html.dark [style*="background:#ecfdf5"],html.dark [style*="background:#dcfce7"]{background:#15271e!important}
+html.dark [style*="background:#e0e7ff"],html.dark [style*="background:#eef2ff"],html.dark [style*="background:#e8f0fe"]{background:#1b2440!important}
+html.dark [style*="background:#fff"]{background:#1a212e!important}
+html.dark [style*="color:#991b1b"],html.dark [style*="color:#7f1d1d"],html.dark [style*="color:#93000a"],html.dark [style*="color:#dc2626"]{color:#fca5a5!important}
+html.dark [style*="color:#166534"],html.dark [style*="color:#065f46"],html.dark [style*="color:#064e3b"],html.dark [style*="color:#059669"]{color:#6ee7b7!important}
+html.dark [style*="color:#3730a3"],html.dark [style*="color:#1e40af"]{color:#93c5fd!important}
+html.dark [style*="color:#854d0e"],html.dark [style*="color:#713f12"],html.dark [style*="color:#92400e"]{color:#fcd34d!important}
+html.dark [style*="color:#525252"],html.dark [style*="color:#737373"],html.dark [style*="color:#404040"],html.dark [style*="color:#9ca3af"]{color:#9aa3b2!important}
+html,body{transition:background-color .2s ease,color .2s ease}
 body{-webkit-font-smoothing:antialiased}
 .mi{font-family:'Material Symbols Outlined';font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
 .mi-f{font-variation-settings:'FILL' 1,'wght' 400}
@@ -68,6 +86,7 @@ input[type=file]{display:none}
       <span>/</span>
       <button onclick="setLang('vi')" id="lang-vi" class="font-bold text-txt3">VN</button>
     </div>
+    <button onclick="toggleTheme()" id="theme-btn" class="mt-2 w-full flex items-center gap-2 text-xs font-bold px-2 py-2.5 rounded-lg text-txt2 hover:bg-surface-high transition-colors"><span class="mi text-[18px]" id="theme-icon">dark_mode</span><span id="theme-label">Dark</span></button>
     <button onclick="isAdmin?logout():openLoginModal()" id="auth-btn" class="mt-2 w-full flex items-center gap-2 text-xs font-bold px-2 py-2.5 rounded-lg transition-colors text-primary hover:bg-primary-bg">
       <span class="mi text-[18px]" id="auth-icon">lock</span>
       <span id="auth-label">Login to edit</span>
@@ -81,6 +100,7 @@ input[type=file]{display:none}
     <h1 class="text-sm font-bold text-primary">Lunch Tracker <span style="font-size:9px;background:#e0e7ff;color:#3730a3;padding:1px 5px;border-radius:4px;font-weight:700">v2.5</span></h1>
     <div class="flex items-center gap-2">
       <button onclick="setLang(lang==='en'?'vi':'en')" class="text-xs font-bold text-primary bg-primary-bg px-2 py-1 rounded" id="m-lang">EN</button>
+      <button onclick="toggleTheme()" class="p-1 rounded-lg" id="m-theme-btn"><span class="mi text-[22px]" id="m-theme-icon" style="color:#0050cb">dark_mode</span></button>
       <button onclick="isAdmin?logout():openLoginModal()" class="p-1 rounded-lg" id="m-auth-btn"><span class="mi text-[22px]" id="m-auth-icon" style="color:#0050cb">lock</span></button>
       <button onclick="openAddModal()" class="bg-primary-c text-white w-8 h-8 rounded-lg flex items-center justify-center"><span class="mi text-[20px]">add</span></button>
     </div>
@@ -114,6 +134,17 @@ var bills=[],payments=[],members=[],shops=[];
 var bOk=false,pOk=false,mOk=false;
 var tab='overview',modal=null,saving=false,pendingPhoto=null,compressing=false;
 var lang=localStorage.getItem('lt-lang')||'en';
+var theme=localStorage.getItem('lt-theme')||((window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches)?'dark':'light');
+function applyTheme(){
+  var dark=theme==='dark';
+  document.documentElement.classList.toggle('dark',dark);
+  var mt=document.querySelector('meta[name=theme-color]');if(mt)mt.content=dark?'#0f141e':'#0066ff';
+  var ti=document.getElementById('theme-icon');if(ti)ti.textContent=dark?'light_mode':'dark_mode';
+  var tl=document.getElementById('theme-label');if(tl)tl.textContent=dark?'Light':'Dark';
+  var mti=document.getElementById('m-theme-icon');if(mti){mti.textContent=dark?'light_mode':'dark_mode';mti.style.color=dark?'#fbbf24':'#0050cb';}
+}
+function toggleTheme(){theme=(theme==='dark')?'light':'dark';localStorage.setItem('lt-theme',theme);applyTheme();}
+applyTheme();
 var weekState={};
 var isAdmin=localStorage.getItem('lt-auth')==='1';
 function sha256(str){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(str)).then(function(b){return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0')}).join('');});}
