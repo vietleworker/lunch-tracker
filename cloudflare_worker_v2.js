@@ -526,9 +526,20 @@ async function deployHTML(htmlContent) {
   const HURL = "https://firebasehosting.googleapis.com/v1beta1";
 
   // Files to ship this version: path -> raw content
+  const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="116" fill="#0066ff"/><text x="256" y="338" font-family="Inter,Arial,sans-serif" font-size="248" font-weight="700" fill="#ffffff" text-anchor="middle">LT</text></svg>`;
+  const MANIFEST = JSON.stringify({
+    name: "Lunch Tracker", short_name: "Lunch", start_url: "/", scope: "/",
+    display: "standalone", background_color: "#f7f9fb", theme_color: "#0066ff",
+    icons: [
+      { src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/icon.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" }
+    ]
+  });
   const files = {
     "/index.html": htmlContent,
-    "/update-bill.html": UPDATE_BILL_HTML
+    "/update-bill.html": UPDATE_BILL_HTML,
+    "/manifest.webmanifest": MANIFEST,
+    "/icon.svg": ICON_SVG
   };
 
   // 1. Gzip + SHA-256 each file

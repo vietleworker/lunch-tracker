@@ -4,3 +4,6 @@ service-account*.json
 .DS_Store
 .wrangler/
 .claude/settings.local.json
+.playwright-mcp/
+*-desktop.jpeg
+*-mobile.jpeg

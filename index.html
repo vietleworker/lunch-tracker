@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lunch Tracker v2.5</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0066ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lunch">
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>Lunch Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -113,7 +120,7 @@ function sha256(str){return crypto.subtle.digest('SHA-256',new TextEncoder().enc
 function logout(){isAdmin=false;localStorage.removeItem('lt-auth');renderAll();}
 
 var L={en:{overview:'Overview',bills:'Bills',payments:'Payments',people:'Members',shops:'Shops',shopName:'Shop name',addShop:'Add Shop',editShop:'Edit Shop',menuItems:'Menu',addDish:'Add dish',selectShop:'Select shop',selectDish:'Select dish',noShop:'Manual input',shopSaved:'Shop saved',mealLabel:'Meal',labelLunch:'Lunch',labelDinner:'Dinner',labelSnack:'Snack',labelOther:'Other',selectBill:'Select bill',shopDeleted:'Shop deleted',unmatchedPayments:'Unmatched payments',assignToBill:'Assign to bill',noBill:'No bill',saveShop:'Save shop',addTx:'Add Transaction',
-totalBills:'Total bills',totalPaid:'Total paid',outstanding:'Outstanding',count:'Count',
+totalBills:'Total bills',totalPaid:'Total paid',outstanding:'Outstanding',surplus:'Surplus',count:'Count',
 topContrib:'Top contributor',recentActivity:'Recent activity',
 notYetPaid:'Not yet paid',collected:'collected',received:'Received',billTotal:'Bill total',
 balance:'Balance',short:'short',fullyPaid:'Fully Paid',collecting:'Collecting',
@@ -142,7 +149,7 @@ avatarColor:'Avatar color',saveMember:'Save member',deleteMember:'Delete member'
     guideNames:'Name list',guideWarn:'Write your name correctly so the system can auto-detect. Wrong name = not recorded automatically.',
     guideContent:'Transfer content',login:'Login to edit',logout:'Logout',readOnly:'View only — login to edit',loginTitle:'Admin Login',loginHint:'Enter password to enable editing',wrongPass:'Wrong password',loginBtn:'Login',settingsTitle:'Settings',changePass:'Change password',newPass:'New password',confirmPass:'Confirm new password',passMismatch:'Passwords do not match',passChanged:'Password changed!',savePass:'Save password'},
 vi:{overview:'T\u1ed5ng quan',bills:'H\u00f3a \u0111\u01a1n',payments:'Thanh to\u00e1n',people:'Th\u00e0nh vi\u00ean',shops:'C\u1eeda h\u00e0ng',shopName:'T\u00ean c\u1eeda h\u00e0ng',addShop:'Th\u00eam c\u1eeda h\u00e0ng',editShop:'S\u1eeda c\u1eeda h\u00e0ng',menuItems:'Th\u1ef1c \u0111\u01a1n',addDish:'Th\u00eam m\u00f3n',selectShop:'Ch\u1ecdn c\u1eeda h\u00e0ng',selectDish:'Ch\u1ecdn m\u00f3n',noShop:'Nh\u1eadp tay',shopSaved:'\u0110\u00e3 l\u01b0u',mealLabel:'B\u1eefa \u0103n',labelLunch:'Tr\u01b0a',labelDinner:'Chi\u1ec1u/T\u1ed1i',labelSnack:'\u0102n v\u1eb7t',labelOther:'Kh\u00e1c',selectBill:'Ch\u1ecdn bill',shopDeleted:'\u0110\u00e3 x\u00f3a',unmatchedPayments:'Kh\u00f4ng kh\u1edbp bill',assignToBill:'G\u00e1n v\u00e0o bill',noBill:'Ch\u01b0a c\u00f3 bill',saveShop:'L\u01b0u',addTx:'Th\u00eam Giao D\u1ecbch',
-totalBills:'T\u1ed5ng h\u00f3a \u0111\u01a1n',totalPaid:'\u0110\u00e3 \u0111\u00f3ng',outstanding:'C\u00f2n thi\u1ebfu',count:'S\u1ed1 l\u01b0\u1ee3ng',
+totalBills:'T\u1ed5ng h\u00f3a \u0111\u01a1n',totalPaid:'\u0110\u00e3 \u0111\u00f3ng',outstanding:'C\u00f2n thi\u1ebfu',surplus:'D\u01b0',count:'S\u1ed1 l\u01b0\u1ee3ng',
 topContrib:'Ng\u01b0\u1eddi \u0111\u00f3ng g\u00f3p nhi\u1ec1u nh\u1ea5t',recentActivity:'Ho\u1ea1t \u0111\u1ed9ng g\u1ea7n \u0111\u00e2y',
 notYetPaid:'Ch\u01b0a thanh to\u00e1n',collected:'\u0111\u00e3 thu',received:'\u0110\u00e3 nh\u1eadn',billTotal:'T\u1ed5ng H\u0110',
 balance:'C\u00f2n l\u1ea1i',short:'thi\u1ebfu',fullyPaid:'\u0110\u00e3 thu \u0111\u1ee7',collecting:'\u0110ang thu',
@@ -280,7 +287,7 @@ var TABS=[{id:'overview',icon:'dashboard'},{id:'bills',icon:'receipt_long'},{id:
 
 function renderNav(){
   var sb='',mn='';
-  TABS.forEach(function(tb){var act=tab===tb.id;var label=t(tb.id==='people'?'people':tb.id);
+  TABS.forEach(function(tb){var act=tab===tb.id;var label=t(tb.id==='people'?'people':tb.id);label=label.charAt(0).toUpperCase()+label.slice(1);
     sb+='<a onclick="switchTab(\''+tb.id+'\')" class="flex items-center gap-3 px-4 py-2 mx-2 rounded-lg cursor-pointer transition-colors '+(act?'bg-primary-c text-white':'text-txt2 hover:bg-surface-high')+'"><span class="mi'+(act?' mi-f':'')+'">'+tb.icon+'</span><span class="text-sm '+(act?'font-bold':'')+'">'+label+'</span></a>';
     mn+='<a onclick="switchTab(\''+tb.id+'\')" class="flex flex-col items-center justify-center px-3 py-1 rounded-full cursor-pointer transition-all '+(act?'bg-secondary-c/30 text-secondary-on':'text-txt3')+'"><span class="mi'+(act?' mi-f':'')+' text-[22px]">'+tb.icon+'</span><span class="text-[10px] font-bold mt-0.5">'+label+'</span></a>';
   });
@@ -289,7 +296,7 @@ function renderNav(){
   document.getElementById('sb-title').textContent=t('group');
   document.getElementById('sb-sub').textContent=t('nMembers');
   document.getElementById('sb-add-label').textContent=t('addTx');
-  document.getElementById('page-title').textContent=t(tab==='people'?'people':tab==='shops'?'shops':tab);
+  var _pt=t(tab==='people'?'people':tab==='shops'?'shops':tab);document.getElementById('page-title').textContent=_pt.charAt(0).toUpperCase()+_pt.slice(1);
   document.getElementById('m-lang').textContent=lang.toUpperCase();
   var ab=document.getElementById('auth-btn');var ai=document.getElementById('auth-icon');var al=document.getElementById('auth-label');
   if(ab)ab.className='mt-2 w-full flex items-center gap-2 text-xs font-bold px-2 py-2.5 rounded-lg transition-colors '+(isAdmin?'bg-surface-high text-txt2':'text-primary hover:bg-primary-bg');
@@ -594,7 +601,7 @@ function renderOverview(){
   return '<section class="grid grid-cols-2 lg:grid-cols-4 gap-3">'+
     '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-outline-v/20"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px]">receipt_long</span><span class="text-xs font-bold uppercase tracking-wider">'+t('totalBills')+'</span></div><div class="text-headline font-bold">'+fmt(totalB)+' <span class="text-sm font-normal text-txt3">&#273;</span></div></div>'+
     '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-outline-v/20"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px]">payments</span><span class="text-xs font-bold uppercase tracking-wider">'+t('totalPaid')+'</span></div><div class="text-headline font-bold text-secondary">'+fmt(totalP)+' <span class="text-sm font-normal text-txt3">&#273;</span></div></div>'+
-    '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-error-c"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px] text-error">warning</span><span class="text-xs font-bold uppercase tracking-wider">'+t('outstanding')+'</span></div><div class="text-headline font-bold text-error">'+fmt(Math.abs(out))+' <span class="text-sm font-normal text-txt3">&#273;</span></div></div>'+
+    '<div class="bg-surface-white p-5 rounded-xl shadow-card border '+(out<0?'border-secondary-c':'border-error-c')+'"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px] '+(out<0?'text-secondary':'text-error')+'">'+(out<0?'savings':'warning')+'</span><span class="text-xs font-bold uppercase tracking-wider">'+(out<0?t('surplus'):t('outstanding'))+'</span></div><div class="text-headline font-bold '+(out<0?'text-secondary':'text-error')+'">'+(out<0?'+':'')+fmt(Math.abs(out))+' <span class="text-sm font-normal text-txt3">&#273;</span></div></div>'+
     '<div class="bg-surface-white p-5 rounded-xl shadow-card border border-outline-v/20"><div class="flex items-center gap-2 text-txt3 mb-2"><span class="mi text-[18px]">analytics</span><span class="text-xs font-bold uppercase tracking-wider">'+t('count')+'</span></div><div class="text-headline font-bold">'+bills.length+' <span class="text-sm font-normal text-txt3">/ '+payments.length+'</span></div></div></section>'+
     '<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-2">'+
     '<section class="bg-surface-white rounded-xl shadow-card border border-outline-v/20 p-6 flex flex-col items-center text-center relative overflow-hidden"><div class="absolute inset-0 bg-gradient-to-br from-primary-bg/40 to-transparent"></div><div class="relative z-10 flex flex-col items-center"><div class="w-20 h-20 rounded-full p-0.5 bg-gradient-to-tr from-primary to-secondary-c mb-3"><div class="w-full h-full rounded-full flex items-center justify-center text-xl font-bold" style="background:'+(topM?topM.bg:'#dae1ff')+';color:'+(topM?topM.fg:'#0050cb')+'">'+initials(topN)+'</div></div><span class="text-[10px] font-bold text-primary uppercase tracking-widest">'+t('topContrib')+'</span><h3 class="text-xl font-bold mt-1">'+esc(topN)+'</h3><p class="text-2xl font-bold text-primary mt-2">'+fmt(topA)+' &#273;</p><p class="text-xs text-txt3 mt-1">'+topCnt+' '+t('paymentCount')+'</p></div></section>'+
@@ -671,7 +678,7 @@ function renderBills(){
     h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;text-align:center">';
     h+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Total bills</div><div class="text-lg font-bold">'+fmt(totalBill)+'<span class="text-xs text-txt3">&#273;</span></div></div>';
     h+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Collected</div><div class="text-lg font-bold" style="color:#059669">'+fmt(totalRec)+'<span class="text-xs text-txt3">&#273;</span></div></div>';
-    h+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">Outstanding</div><div class="text-lg font-bold" style="color:#dc2626">'+fmt(totalBill-totalRec)+'<span class="text-xs text-txt3">&#273;</span></div></div>';
+    h+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">'+((totalBill-totalRec)<0?'Surplus':'Outstanding')+'</div><div class="text-lg font-bold" style="color:'+((totalBill-totalRec)<0?'#059669':'#dc2626')+'">'+((totalBill-totalRec)<0?'+':'')+fmt(Math.abs(totalBill-totalRec))+'<span class="text-xs text-txt3">&#273;</span></div></div>';
     h+='<div><div class="text-[10px] text-txt3 font-bold" style="text-transform:uppercase;letter-spacing:.5px">People</div><div class="text-lg font-bold">'+pplCount+'</div></div>';
     h+='</div>';
     // Fun stats row
@@ -1461,7 +1468,7 @@ db.collection('bills').orderBy('createdAt').onSnapshot(function(snap){bills=snap
 db.collection('payments').orderBy('createdAt').onSnapshot(function(snap){payments=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});pOk=true;render();});
 db.collection('members').onSnapshot(function(snap){members=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});mOk=true;render();});
 db.collection('shops').orderBy('name').onSnapshot(function(snap){shops=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x;});render();});
-document.getElementById('tab-content').innerHTML='<div class="text-center text-txt3 py-12">Connecting...</div>';
+document.getElementById('tab-content').innerHTML='<div class="flex flex-col items-center justify-center py-24 gap-3 text-txt3"><span class="mi text-[40px] animate-spin" style="color:#0066ff">progress_activity</span><span class="text-sm">'+t('connecting')+'</span></div>';
 
 /* ââ SEED MEMBERS ââ */
 db.doc('meta/members_seeded').get().then(function(doc){

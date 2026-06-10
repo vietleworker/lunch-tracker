@@ -33,8 +33,9 @@ EOF
 
 ## Deploy update-bill.html (share page)
 The share page lives on Firebase Hosting at `https://lunche-81567.web.app/update-bill.html?bill=N`.
-`deployHTML` ships BOTH `/index.html` AND `/update-bill.html` in one version (the latter
-from the `UPDATE_BILL_HTML` constant at the top of the Worker). To update the share page:
+`deployHTML` ships `/index.html` + `/update-bill.html` + `/manifest.webmanifest` + `/icon.svg`
+in one version (the last three from constants in the Worker — `UPDATE_BILL_HTML`, and `MANIFEST`/
+`ICON_SVG` inside `deployHTML`). The app is an installable PWA. To update the share page:
 1. Edit `/Users/victor/Documents/lunche/update-bill.html`
 2. Re-embed it into `UPDATE_BILL_HTML` in `cloudflare_worker_v2.js` (escape `\`` and `${`), deploy Worker
 3. Run the deployHTML script above (pushes both files to Hosting)
