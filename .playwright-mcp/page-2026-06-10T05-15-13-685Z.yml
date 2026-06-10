@@ -1,0 +1,30 @@
+- generic [active] [ref=e1]:
+  - complementary [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: LT
+      - heading "Lunch Group" [level=1] [ref=e5]
+      - paragraph [ref=e6]: 9 members
+      - button "add Add Transaction" [ref=e7] [cursor=pointer]:
+        - generic [ref=e8]: add
+        - generic [ref=e9]: Add Transaction
+    - navigation [ref=e10]
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: translate
+        - button "EN" [ref=e14] [cursor=pointer]
+        - generic [ref=e15]: /
+        - button "VN" [ref=e16] [cursor=pointer]
+      - button "lock Login to edit" [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: lock
+        - generic [ref=e19]: Login to edit
+  - main [ref=e20]:
+    - generic [ref=e22]:
+      - button "search" [ref=e23] [cursor=pointer]
+      - button "notifications" [ref=e24] [cursor=pointer]
+      - button "settings" [ref=e25] [cursor=pointer]
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - generic:
+          - heading [level=2]
+          - paragraph
+      - generic [ref=e29]: Connecting...

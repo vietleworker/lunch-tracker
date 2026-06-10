@@ -124,7 +124,7 @@ photo:'Receipt photo',save:'Save',saveChanges:'Save changes',delete:'Delete',can
 select:'Select member...',compressing:'Compressing...',replace:'Replace photo',
 noData:'No data yet',connecting:'Connecting...',group:'Lunch Group',nMembers:'9 members',
 thisWeek:'THIS WEEK',lastWeek:'LAST WEEK',earlier:'EARLIER',paymentCount:'payments',
-totalPaidLabel:'total paid',payer:'Payer',contentLabel:'Details',detail:'Detail',
+totalPaidLabel:'total paid',payer:'Payer',contentLabel:'Details',detail:'Detail',payLabel:'payments',
 confirmPayment:'Confirm payment',saveBill:'Save bill',
 orderDetails:'Order details',selectAll:'Select all',dish:'Dish',price:'Price',
 uploadReceipt:'Upload receipt photo',uploadProof:'Upload proof',dragDrop:'Click to upload or drag & drop',maxSize:'Max 5MB',
@@ -936,7 +936,7 @@ function renderAll(){renderNav();
   if(tab==='overview')c=renderOverview();else if(tab==='bills')c=renderBills();
   else if(tab==='payments')c=renderPayments();else if(tab==='shops')c=renderShops();else if(tab==='people')c=renderPeople();
   document.getElementById('tab-content').innerHTML=c;wireEvents();
-  if(tab==='overview'&&_ok)setTimeout(updatePink,50);}
+  if(tab==='overview'&&window._ok)setTimeout(window.updatePink,50);}
 function wireEvents(){
   document.querySelectorAll('[data-eb]').forEach(function(el){el.onclick=function(){var b=bills.find(function(x){return x.id===el.getAttribute('data-eb')});if(b)openEditModal('bill',b);};});
   document.querySelectorAll('[data-ep],[data-ep2]').forEach(function(el){el.onclick=function(e){e.stopPropagation();var id=el.getAttribute('data-ep')||el.getAttribute('data-ep2');if(!id)return;var p=payments.find(function(x){return x.id===id});if(p)openEditModal('payment',p);};});
@@ -1583,7 +1583,7 @@ fetch(FS+"/bills?pageSize=100").then(function(r){return r.json()}).then(function
     bd[k].sort(function(a,b){return a.nm<b.nm?-1:1});
     _byDay[k]=bd[k].map(function(x){return x.no});
   });
-  _ok=true;
+  _ok=true;window._ok=true;window.updatePink=updatePink;
   console.log("[v4] loaded",Object.keys(_meta).length,"bills");
   updatePink();
 });

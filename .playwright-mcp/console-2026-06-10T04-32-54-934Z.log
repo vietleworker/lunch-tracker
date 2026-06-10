@@ -1,0 +1,19 @@
+[     760ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[     837ms] [LOG] [v4] payment tagging + tooltips loaded @ https://lunche-81567.web.app/:1775
+[    1292ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://lunche-81567.web.app/favicon.ico:0
+[    1909ms] ReferenceError: _ok is not defined
+    at renderAll (https://lunche-81567.web.app/:939:24)
+    at render (https://lunche-81567.web.app/:1029:36)
+    at Object.next (https://lunche-81567.web.app/:1462:132)
+    at Object.next (https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js:1:333574)
+    at next (https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js:1:320491)
+    at https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js:1:269329
+[    1938ms] ReferenceError: _ok is not defined
+    at renderAll (https://lunche-81567.web.app/:939:24)
+    at render (https://lunche-81567.web.app/:1029:36)
+    at Object.next (https://lunche-81567.web.app/:1463:135)
+    at Object.next (https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js:1:333574)
+    at next (https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js:1:320491)
+    at https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js:1:269329
+[    1940ms] [LOG] [v4] loaded 24 bills @ https://lunche-81567.web.app/:1586
+[    2139ms] [LOG] [v4] Bill context: #0906261 (#0906261 Mỳ Quả) @ https://lunche-81567.web.app/:1607
